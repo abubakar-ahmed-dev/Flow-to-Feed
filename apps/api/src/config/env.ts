@@ -26,8 +26,12 @@ export const env = {
 
   supabase: {
     url: optional("SUPABASE_URL"),
-    anonKey: optional("SUPABASE_ANON_KEY"),
-    serviceRoleKey: optional("SUPABASE_SERVICE_ROLE_KEY"),
+    // New key names (sb_publishable_*/sb_secret_*) replace anon/service_role
+    // (legacy names deprecated end of 2026). Legacy names accepted as fallback.
+    publishableKey:
+      optional("SUPABASE_PUBLISHABLE_KEY") ?? optional("SUPABASE_ANON_KEY"),
+    secretKey:
+      optional("SUPABASE_SECRET_KEY") ?? optional("SUPABASE_SERVICE_ROLE_KEY"),
     mediaBucket: optional("SUPABASE_MEDIA_BUCKET") ?? "shareable-assets",
   },
 
