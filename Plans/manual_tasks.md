@@ -11,8 +11,9 @@ Human-only steps. Full details + fill-in blanks: `things-required.txt` (local fi
 ## T2 — Supabase project (unblocks: P1, P2, P4) — ~10 min
 
 1. supabase.com → New project (free tier). Note region.
-2. Settings → API: copy Project URL, `anon` key, `service_role` key → paste into `things-required.txt` and `apps/api/.env`.
-3. Do not run any SQL — the agent supplies migrations in Phase 1.
+2. Settings → API keys: copy Project URL, `Publishable` key, `Secret` key → paste into `things-required.txt` and `apps/api/.env`. (New key names replace legacy anon/service_role; both work until end of 2026.)
+3. **T2b:** Dashboard → Connect → copy the **Session pooler** connection string into `apps/api/.env` as `SUPABASE_DB_URL` (dev/migrations only).
+4. Do not run any SQL — the agent supplies migrations in Phase 1.
 
 ## T3 — Gemma API key (unblocks: P5) — ~10 min
 
