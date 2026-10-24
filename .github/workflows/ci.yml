@@ -2,12 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
+    branches: [main, dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    name: Typecheck & build
+    name: Typecheck, build & test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,3 +30,6 @@ jobs:
 
       - name: Build all workspaces
         run: npm run build
+
+      - name: Unit tests
+        run: npm test
