@@ -5,6 +5,8 @@
 **Deadline:** submission publish target Oct 25 evening PKT; hard deadline **Oct 26, 2026, 11:59 AM PKT**.
 **Status convention:** mark each checklist item `Completed` when done. After every phase (completed or not), write a log entry in `implementation_log/phase_<N>_implementation.md`.
 
+**Branch conventions (owner-approved 2026-10-24):** feature branches start from `dev` and are named by capability **without phase numbers** — `api-core`, `n8n-skeleton`, `web-shell`, `diagrams`, `social-variants`, `visuals`, `distribution`, `public-sample`, `render-deploy`, `submission`. Merged phase branches are **kept, never deleted** (PR merges must not use `--delete-branch`). PRs target `dev`; `dev` merges to `main`. Dependabot: daily schedule, targets `dev`, majors ignored during the challenge window.
+
 ## Dependency graph
 
 ```

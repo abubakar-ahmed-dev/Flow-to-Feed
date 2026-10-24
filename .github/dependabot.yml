@@ -2,9 +2,29 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: "/"
+    target-branch: dev
     schedule:
-      interval: weekly
+      interval: daily
+    # Major bumps stay off during the hackathon window; re-enable after submission.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
   - package-ecosystem: github-actions
     directory: "/"
+    target-branch: dev
     schedule:
-      interval: weekly
+      interval: daily
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - minor
+          - patch

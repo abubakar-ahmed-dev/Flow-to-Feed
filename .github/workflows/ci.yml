@@ -33,3 +33,8 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      # Code scanning (CodeQL) requires a public repo; this keeps a dependency
+      # security signal while the repository is private. Non-blocking by design.
+      - name: Dependency audit (non-blocking)
+        run: npm audit --audit-level=high || echo "::notice::audit findings present — triage scheduled post-submission"
