@@ -1,0 +1,23 @@
+{
+  "name": "flow-to-feed",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turn technical Markdown into editable Mermaid diagrams and channel-specific visual lessons, ready to review and share.",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:web": "npm run dev -w @flowtofeed/web",
+    "dev:api": "npm run dev -w @flowtofeed/api",
+    "build": "npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/api && npm run build -w @flowtofeed/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "compose:up": "docker compose up -d",
+    "compose:down": "docker compose down",
+    "compose:logs": "docker compose logs -f n8n"
+  }
+}

@@ -1,0 +1,45 @@
+# Render blueprint for the FlowToFeed application service.
+# The n8n service is created manually in the Render dashboard (Docker runtime
+# with a persistent disk); see docs/deployment.md for the exact steps.
+services:
+  - type: web
+    name: flowtofeed-app
+    runtime: node
+    plan: starter
+    region: oregon
+    healthCheckPath: /api/health
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start -w @flowtofeed/api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: N8N_BASE_URL
+        sync: false
+      - key: N8N_GENERATION_WEBHOOK_URL
+        sync: false
+      - key: N8N_DISTRIBUTION_WEBHOOK_URL
+        sync: false
+      - key: N8N_WEBHOOK_SECRET
+        generateValue: true
+      - key: N8N_CALLBACK_SECRET
+        generateValue: true
+      - key: N8N_CALLBACK_BASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_MEDIA_BUCKET
+        value: shareable-assets
+      - key: OWNER_USER_ID
+        sync: false
+      - key: GEMMA_API_KEY
+        sync: false
+      - key: GEMMA_MODEL
+        sync: false
+      - key: BUFFER_API_KEY
+        sync: false
+      - key: DEFAULT_TIMEZONE
+        value: Asia/Karachi
