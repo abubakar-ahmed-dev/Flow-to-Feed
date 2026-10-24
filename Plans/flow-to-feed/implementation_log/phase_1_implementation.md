@@ -34,3 +34,14 @@
 - Phase 2 (API core) can start in parallel — it only needs the schema (written; applying is a formality once T2b lands) and Supabase keys (present).
 - New key names (`SUPABASE_PUBLISHABLE_KEY`/`SUPABASE_SECRET_KEY`) are primary everywhere; legacy names read as fallback.
 - `.gitignore` now also excludes `.claude/`.
+
+## Completion (2026-10-24)
+
+- T2b received: `SUPABASE_DB_URL` (Session pooler) added to `apps/api/.env`.
+- `npm run db:migrate` — `0001_init.sql` applied, recorded in `schema_migrations`.
+- `npm run db:verify` — 16/16 PASS:
+  - service-role reads all 7 tables
+  - anon reads all 7 tables (zero rows, no errors)
+  - anon insert into `projects` rejected: "new row violates row-level security policy" — lockdown confirmed
+  - `shareable-assets` bucket created, public
+- **Phase 1 complete.** Phase 2 unblocked; owner_id FK on `auth.users` means T7 (first signup) still needed before real owner data exists.

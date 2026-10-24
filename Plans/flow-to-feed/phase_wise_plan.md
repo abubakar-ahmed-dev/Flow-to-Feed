@@ -52,15 +52,15 @@ Acceptance: `npm install && npm run typecheck && npm run build` passes; repo pus
 
 ## Phase 1 — Data model & migrations (backend)
 
-Goal: authoritative schema in Supabase with ownership enforced.
+Goal: authoritative schema in Supabase with ownership enforced. **Completed 2026-10-24.**
 
 Depends on: P0. Owner manual task T2 (Supabase project) must be done.
 
 - [x] `supabase/migrations/0001_init.sql`: tables `projects`, `diagrams`, `variants`, `assets`, `jobs`, `distribution_attempts` per `docs/architecture.md` data model (plus `job_events` for idempotent callbacks)
 - [x] Ownership: `owner_id` columns + RLS policies (owner read/write; public read limited to the sample project)
 - [x] Idempotency: unique constraint on `distribution_attempts.idempotency_key`
-- [ ] Apply migration to the Supabase project and verify with a smoke query — **blocked on T2b: `SUPABASE_DB_URL`** (Connect → Session pooler string, into `apps/api/.env`)
-- [ ] Verify service-role access path works and anon access is locked down (`npm run db:verify`)
+- [x] Apply migration to the Supabase project and verify with a smoke query (`0001_init.sql` applied 2026-10-24)
+- [x] Verify service-role access path works and anon access is locked down (`npm run db:verify` — 16/16 PASS, bucket created)
 
 Acceptance: tables exist; anon key cannot read owner rows; unique constraint present.
 
