@@ -1,0 +1,89 @@
+{
+  "name": "FlowToFeed — Generate",
+  "active": true,
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "description": "Workflow A v0: authenticated webhook -> 202 ack -> idempotent callback to the API. Secrets live in headerAuth credentials (placeholders documented here; real values provisioned by scripts/n8n-provision.ts)."
+  },
+  "nodes": [
+    {
+      "id": "webhook-generate",
+      "name": "Generate Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, 0],
+      "webhookId": "flowtofeed-generate",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "flowtofeedWebhookAuth",
+          "name": "FlowToFeed Generate Webhook Auth"
+        }
+      }
+    },
+    {
+      "id": "ack-202",
+      "name": "Ack 202",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [20, 0],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { accepted: true, jobId: $json.body.jobId } }}",
+        "options": { "responseCode": 202 }
+      }
+    },
+    {
+      "id": "map-job-event",
+      "name": "Map Job Event",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [240, 0],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a-job", "name": "jobId", "value": "={{ $json.body.jobId }}", "type": "string" },
+            { "id": "a-event", "name": "eventId", "value": "=n8n-{{ $json.body.jobId }}-ack", "type": "string" },
+            { "id": "a-stage", "name": "stage", "value": "webhook_received", "type": "string" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "callback-api",
+      "name": "Callback API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:3000/api/internal/jobs/{{ $json.jobId }}/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-callback-secret",
+              "value": "REPLACE_N8N_CALLBACK_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ eventId: $json.eventId, jobId: $json.jobId, status: 'running', stage: $json.stage }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Generate Webhook": { "main": [[{ "node": "Ack 202", "type": "main", "index": 0 }]] },
+    "Ack 202": { "main": [[{ "node": "Map Job Event", "type": "main", "index": 0 }]] },
+    "Map Job Event": { "main": [[{ "node": "Callback API", "type": "main", "index": 0 }]] }
+  }
+}
