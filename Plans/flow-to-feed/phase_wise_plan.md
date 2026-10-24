@@ -66,15 +66,15 @@ Acceptance: tables exist; anon key cannot read owner rows; unique constraint pre
 
 ## Phase 2 — API core (backend)
 
-Goal: authenticated project CRUD with revision tracking.
+Goal: authenticated project CRUD with revision tracking. **Completed 2026-10-24** (PR #9 → dev). CI green-run on dev pending — see log.
 
 Depends on: P1.
 
-- [ ] Supabase Auth integration: session verification middleware (owner check on every project route)
-- [ ] `GET/POST /api/projects`, `GET/PATCH /api/projects/:id` (source revision/hash recompute, stale-flag derived outputs)
-- [ ] `GET /api/jobs/:id`, `POST /api/internal/jobs/:id/events` (secret-checked, idempotent by `eventId`)
-- [ ] Shared Zod validators for all request bodies in `packages/shared`
-- [ ] Input validation: 20,000-char source cap enforced server-side
+- [x] Supabase Auth integration: session verification middleware (owner check on every project route)
+- [x] `GET/POST /api/projects`, `GET/PATCH /api/projects/:id` (source revision/hash recompute, stale-flag derived outputs)
+- [x] `GET /api/jobs/:id`, `POST /api/internal/jobs/:id/events` (secret-checked, idempotent by `eventId`)
+- [x] Shared Zod validators for all request bodies in `packages/shared`
+- [x] Input validation: 20,000-char source cap enforced server-side
 
 Acceptance: unauthenticated calls rejected; owner CRUD works; source change flips revision hash.
 
