@@ -16,8 +16,16 @@
     "dev:api": "npm run dev -w @flowtofeed/api",
     "build": "npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/api && npm run build -w @flowtofeed/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:migrate": "tsx scripts/apply-migrations.ts",
+    "db:verify": "tsx scripts/verify-phase1.ts",
     "compose:up": "docker compose up -d",
     "compose:down": "docker compose down",
     "compose:logs": "docker compose logs -f n8n"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.0",
+    "tsx": "^4.19.2"
   }
 }
