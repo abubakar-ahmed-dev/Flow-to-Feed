@@ -15,7 +15,7 @@
     "dev:web": "npm run dev -w @flowtofeed/web",
     "dev:api": "npm run dev -w @flowtofeed/api",
     "build": "npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/api && npm run build -w @flowtofeed/web",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run build -w @flowtofeed/shared && npm run typecheck --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "db:migrate": "tsx scripts/apply-migrations.ts",
     "db:verify": "tsx scripts/verify-phase1.ts",
