@@ -5,7 +5,11 @@
     "moduleResolution": "NodeNext",
     "types": ["node"],
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@flowtofeed/shared": ["../../packages/shared/src/index.ts"]
+    }
   },
   "include": ["src"]
 }
