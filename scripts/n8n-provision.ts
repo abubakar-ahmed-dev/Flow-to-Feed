@@ -85,26 +85,23 @@ async function main() {
       },
     ]),
   );
+  // The outgoing callback secret cannot ride a generic headerAuth credential
+  // (HTTP Request node drops it at runtime — verified 2026-10-24), so the
+  // provisioned workflow copy carries the real value; the committed source
+  // keeps the placeholder.
   writeFileSync(
-    path.join(IMPORT_DIR, "cred-callback.json"),
-    JSON.stringify([
-      {
-        id: "flowtofeedCallbackAuth",
-        name: "FlowToFeed Callback Auth",
-        type: "httpHeaderAuth",
-        data: { name: "x-callback-secret", value: callbackSecret },
-      },
-    ]),
+    path.join(IMPORT_DIR, "generate.json"),
+    readFileSync(WORKFLOW_SRC, "utf8").replace(
+      "REPLACE_N8N_CALLBACK_SECRET",
+      callbackSecret,
+    ),
   );
-  writeFileSync(path.join(IMPORT_DIR, "generate.json"), readFileSync(WORKFLOW_SRC));
 
   sh(`docker exec ${CONTAINER} mkdir -p /home/node/.n8n-import`);
   sh(`docker cp "${IMPORT_DIR}/." ${CONTAINER}:/home/node/.n8n-import/`);
-  for (const file of ["cred-webhook.json", "cred-callback.json"]) {
-    console.log(
-      sh(`docker exec ${CONTAINER} sh -c "n8n import:credentials --input=/home/node/.n8n-import/${file}"`) || `imported ${file}`,
-    );
-  }
+  console.log(
+    sh(`docker exec ${CONTAINER} sh -c "n8n import:credentials --input=/home/node/.n8n-import/cred-webhook.json"`) || "imported webhook credential",
+  );
   console.log(
     sh(
       `docker exec ${CONTAINER} sh -c "n8n import:workflow --input=/home/node/.n8n-import/generate.json"`,
@@ -113,7 +110,8 @@ async function main() {
   // regular deployment mode ignores --activeState on import; activate explicitly
   const listing = sh(`docker exec ${CONTAINER} sh -c "n8n list:workflow"`);
   console.log(listing);
-  const workflowId = listing.match(/^([^\s|]+)\s*\|/m)?.[1];
+  const ids = [...listing.matchAll(/^([^\s|]+)\s*\|/gm)].map((m) => m[1]);
+  const workflowId = ids.at(-1); // freshly imported workflow is last in the list
   if (workflowId) {
     console.log(
       sh(
@@ -122,6 +120,7 @@ async function main() {
     );
   } else {
     console.error("could not resolve workflow id from list:workflow output");
+    console.error(listing);
   }
 
   // active workflow webhooks register at startup

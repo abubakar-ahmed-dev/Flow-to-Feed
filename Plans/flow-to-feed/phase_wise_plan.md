@@ -82,15 +82,15 @@ Acceptance: unauthenticated calls rejected; owner CRUD works; source change flip
 
 ## Phase 3 — n8n local + Workflow A skeleton (automation)
 
-Goal: authenticated webhook → ack → callback loop proven end to end.
+Goal: authenticated webhook → ack → callback loop proven end to end. **Completed 2026-10-24** (round-trip verified on n8n 2.44.6).
 
 Depends on: P0 (owner manual tasks T5, T6). Integrates with P2's callback route.
 
-- [ ] `docker compose up -d`, n8n owner account created, volume persists across restart
-- [ ] Workflow A v0: webhook (secret header check) → respond 202 → Set node → HTTP Request callback to `http://host.docker.internal:3000/api/internal/jobs/...`
-- [ ] Callback received, stored, idempotent (duplicate `eventId` ignored)
-- [ ] Export workflow JSON to `workflows/generate.json` with credential placeholders
-- [ ] Record tested n8n version in `workflows/README.md`
+- [x] `docker compose up -d`, n8n running with persistent volume + fixed encryption key (owner UI account still pending — T6; CLI provisioning covers this phase)
+- [x] Workflow A v0: webhook (secret header check) → respond 202 → Set node → HTTP Request callback to `http://host.docker.internal:3000/api/internal/jobs/...`
+- [x] Callback received, stored, idempotent (duplicate `eventId` ignored)
+- [x] Export workflow JSON to `workflows/generate.json` with credential placeholders
+- [x] Record tested n8n version in `workflows/README.md`
 
 Acceptance: API-triggered webhook round-trips; container restart keeps workflow.
 
