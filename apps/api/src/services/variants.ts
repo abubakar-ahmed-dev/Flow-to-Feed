@@ -117,7 +117,8 @@ export async function saveVariantFromJob(
   const platform = result.platform;
   // backend-side content validation (X weighted length etc.)
   // content is the wrapper {instagram|facebook|x: {...}}; validators take the per-platform section
-  const issues = validateSocialContent(platform, result.content?.[platform]);
+  const content = result.content as SocialContent;
+  const issues = validateSocialContent(platform, content[platform]);
   if (issues.length > 0) {
     console.error("[variants] content rejected:", platform, JSON.stringify(issues));
     return { error: "invalid_job" };
