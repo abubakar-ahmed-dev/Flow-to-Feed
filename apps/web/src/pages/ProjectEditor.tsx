@@ -267,6 +267,7 @@ export default function ProjectEditor() {
         projectId={detail.project.id}
         passage={passage?.text || markdown.slice(0, 4000)}
         variants={detail.variants}
+        diagrams={detail.diagrams}
         onChanged={() => void load()}
       />
     </main>
