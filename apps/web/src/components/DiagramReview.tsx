@@ -1,23 +1,42 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
-import type { DiagramRow } from "../types";
+import { api, ApiError } from "../lib/api";
+import type { DiagramRow, JobResponse } from "../types";
 
 mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "dark" });
 
 interface Props {
   diagram: DiagramRow;
-  onSave: (patch: { mermaid: string; render_state: "rendered" | "failed"; review_state?: "draft" | "approved" | "rejected" }) => Promise<void>;
+  onSave: (patch: {
+    mermaid: string;
+    render_state: "rendered" | "failed";
+    review_state?: "draft" | "approved" | "rejected";
+  }) => Promise<void>;
+}
+
+const MAX_COMPONENTS = 12;
+
+function countComponents(mermaid: string): number {
+  return (mermaid.match(/^(?:\s{4})?(?:service |participant )/gm) || []).length
+    || (mermaid.match(/^\s{4}\w+\[[^\]]+\]/gm) || []).length;
 }
 
 let renderSeq = 0;
 
-/** Renders Mermaid client-side; a failed render keeps the draft and shows the parser error. */
+/** Renders Mermaid client-side; failed render keeps the draft and offers one bounded AI repair. */
 export default function DiagramReview({ diagram, onSave }: Props) {
   const [code, setCode] = useState(diagram.mermaid ?? "");
   const [editing, setEditing] = useState(false);
   const [svg, setSvg] = useState<string | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [repairState, setRepairState] = useState<"idle" | "working" | "applied" | "failed">("idle");
+  const [repairNote, setRepairNote] = useState<string | null>(null);
+  const svgWrap = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setCode(diagram.mermaid ?? "");
+  }, [diagram.id, diagram.mermaid]);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +65,8 @@ export default function DiagramReview({ diagram, onSave }: Props) {
     };
   }, [code]);
 
+  const components = countComponents(code);
+
   async function save(reviewState?: "approved" | "rejected") {
     setSaving(true);
     try {
@@ -58,6 +79,67 @@ export default function DiagramReview({ diagram, onSave }: Props) {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function repair() {
+    setRepairState("working");
+    setRepairNote(null);
+    try {
+      const { job } = await api<JobResponse>(`/diagrams/${diagram.id}/repair`, {
+        method: "POST",
+        body: { renderError: (renderError || "manual repair requested").slice(0, 2000) },
+      });
+      let current = job;
+      const deadline = Date.now() + 300_000;
+      while (current && (current.state === "queued" || current.state === "running") && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 3000));
+        current = (await api<JobResponse>(`/jobs/${current.id}`)).job;
+      }
+      if (!current || current.state !== "succeeded") {
+        throw new ApiError(500, "repair_failed", current?.error?.message ?? "Repair job did not succeed");
+      }
+      await api(`/diagrams/${diagram.id}/apply-repair`, { method: "POST", body: { jobId: current.id } });
+      setRepairState("applied");
+      setRepairNote("Repair applied — review the updated source below.");
+    } catch (e) {
+      setRepairState("failed");
+      setRepairNote(e instanceof ApiError ? e.message : "Repair failed");
+    }
+  }
+
+  function download(name: string, blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportSvg() {
+    const el = svgWrap.current?.querySelector("svg");
+    if (!el) return;
+    download(`${diagram.mode}-diagram.svg`, new Blob([el.outerHTML], { type: "image/svg+xml" }));
+  }
+
+  function exportPng() {
+    const el = svgWrap.current?.querySelector("svg");
+    if (!el) return;
+    const xml = new XMLSerializer().serializeToString(el);
+    const img = new Image();
+    const scale = 2;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((b) => b && download(`${diagram.mode}-diagram.png`, b), "image/png");
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
   }
 
   return (
@@ -73,9 +155,27 @@ export default function DiagramReview({ diagram, onSave }: Props) {
             stale
           </span>
         )}
+        {components > 10 && (
+          <span style={{ ...badge, color: "var(--warn)" }} title="Dense diagram — consider splitting the passage">
+            {components} components
+          </span>
+        )}
         <span style={{ flex: 1 }} />
         <button onClick={() => setEditing(!editing)} style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
           {editing ? "Preview" : "Edit source"}
+        </button>
+        {svg && (
+          <>
+            <button onClick={exportSvg} style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>SVG</button>
+            <button onClick={exportPng} style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>PNG</button>
+          </>
+        )}
+        <button
+          onClick={repair}
+          disabled={repairState === "working"}
+          title="One bounded AI repair using the render error"
+        >
+          {repairState === "working" ? "Repairing…" : "Repair"}
         </button>
         {diagram.review_state !== "approved" && (
           <button onClick={() => save("approved")} disabled={saving || !!renderError}>
@@ -83,6 +183,12 @@ export default function DiagramReview({ diagram, onSave }: Props) {
           </button>
         )}
       </div>
+
+      {repairNote && (
+        <p style={{ color: repairState === "applied" ? "var(--ok)" : "var(--danger)", margin: "0.5rem 0 0" }}>
+          {repairNote}
+        </p>
+      )}
 
       <div style={{ marginTop: "0.75rem" }}>
         {editing ? (
@@ -94,7 +200,11 @@ export default function DiagramReview({ diagram, onSave }: Props) {
             style={codeStyle}
           />
         ) : svg ? (
-          <div style={{ background: "#fff", borderRadius: 8, padding: 8, overflowX: "auto" }} dangerouslySetInnerHTML={{ __html: svg }} />
+          <div
+            ref={svgWrap}
+            style={{ background: "#ffffff", borderRadius: 8, padding: 8, overflowX: "auto" }}
+            dangerouslySetInnerHTML={{ __html: svg }}
+          />
         ) : (
           <p style={{ color: "var(--danger)", whiteSpace: "pre-wrap" }}>Render error: {renderError}</p>
         )}

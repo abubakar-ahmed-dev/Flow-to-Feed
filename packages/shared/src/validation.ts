@@ -35,6 +35,14 @@ export const updateDiagramSchema = z.object({
   review_state: z.enum(["draft", "approved", "rejected"]).optional(),
 });
 
+export const repairDiagramSchema = z.object({
+  renderError: z.string().trim().min(1).max(2000),
+});
+
+export const applyRepairSchema = z.object({
+  jobId: z.string().uuid(),
+});
+
 export const jobEventSchema = z.object({
   eventId: z.string().min(8).max(200),
   jobId: z.string().uuid(),

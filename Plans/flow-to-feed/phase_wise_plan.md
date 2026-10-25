@@ -127,9 +127,19 @@ Acceptance: cache-aside passage yields a valid rendered diagram saved to the pro
 
 ## Phase 6 — Diagram feature (frontend + prompts)
 
-Goal: three diagram modes with editable, validated, exportable Mermaid.
+Goal: three diagram modes with editable, validated, exportable Mermaid. **Completed 2026-10-25.** Icon *packs* (tech logos) deliberately deferred — the built-in architecture icon set (server/database/cache/disk/internet/cloud/user) covers the demo; custom packs need Iconify registration + bundle work not worth the deadline risk. Recorded honestly for the write-up.
 
 Depends on: P5.
+
+- [x] Three modes: `architecture`, `flowchart`, `sequence` — prompts `architecture-v2`/`flowchart-v2`/`sequence-v2` + mode-aware compiler (`workflows/src/analysis-compiler.js`, pure module, unit-tested)
+- [x] Icon guardrail: compiler maps only built-in icon types; >10 components flags a density hint in the UI
+- [x] Editable Mermaid source with live client-side syntax validation (failed render keeps the draft and shows the parser error)
+- [x] Failed render → one bounded AI repair (`POST /api/diagrams/:id/repair` → `diagram_repair` job → apply-repair ties result to the current source revision) — E2E verified (198s)
+- [x] Multiple diagrams per project tied to passage + source revision (from P2/P5)
+- [x] SVG + PNG export client-side (bundled fonts/icons apply to SVG; PNG flattened white background)
+- [x] Evidence: `evidence/measurements.md` rows for flowchart generation (144s) + repair (198s)
+
+Acceptance: flowchart + architecture generated and rendered from cache-aside; broken Mermaid repaired end to end — met.
 
 - [ ] Mermaid rendering in browser with registered icon packs (cloud/db/disk/internet/server + curated tech icons: Redis, PostgreSQL, Docker, …)
 - [ ] Icon manifest generated from installed assets; Gemma receives only valid ids + meanings
