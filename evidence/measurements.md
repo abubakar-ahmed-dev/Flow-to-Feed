@@ -21,3 +21,4 @@ Real observations only. One row per verified run.
 | 2026-10-25 | social adapt (IG+FB+X parallel) | gemma-4-26b-a4b-it | social-*-v2 | 229.3s | 3 variants saved |
 | 2026-10-25 | social adapt (IG+FB+X parallel) | gemma-4-26b-a4b-it | social-*-v2 | 429.4s | 3 variants saved |
 | 2026-10-25 | social adapt (IG+FB+X parallel) | gemma-4-26b-a4b-it | social-*-v2 | 1162.9s | 3 variants saved |
+| 2026-10-25 | social adapt (IG+FB+X parallel) | gemma-4-26b-a4b-it | social-*-v2 | 2553.5s | 3 variants saved |

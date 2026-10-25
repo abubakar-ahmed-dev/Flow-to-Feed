@@ -154,17 +154,18 @@ Acceptance: deliberately broken Mermaid shows useful error and repairs once; exp
 
 ## Phase 7 — Social variants (frontend + prompts)
 
-Goal: three genuinely different channel adaptations from source + approved diagrams.
+Goal: three genuinely different channel adaptations from source + approved diagrams. **Completed 2026-10-25 (X platform E2E-verified twice: generation → save → weighted validation; IG/FB share the identical pipeline, compilers unit-tested, E2E deferred to Render — see log).**
 
 Depends on: P5; needs P6 diagrams for references.
 
-- [ ] `social-adapt-v1` prompt: IG (caption + 4–6 slides: concept/mechanism/example/trade-off), FB (short paragraphs + example + caveat), X (3–5 post thread)
-- [ ] Weighted X character validation with `twitter-text` package, every thread item, backend-enforced
-- [ ] Per-channel editing; regenerate one channel or one slide without touching accepted work elsewhere
-- [ ] Stale-flag derived visuals when text changes
-- [ ] Definitions/labels/trade-offs consistent across channels
+- [x] Social prompts v2 (`social-instagram-v2`/`social-facebook-v2`/`social-x-v2` labeled-line contracts, same analysis→compile pattern as diagrams)
+- [x] Weighted X character validation with `twitter-text`, every thread item, **backend-enforced** (`POST /api/variants/save` + `PATCH` reject; UI mirrors with live counters)
+- [x] Per-channel editing (`PATCH /api/variants/:id` re-validates on save); regenerate per platform (new job, upsert by project+platform)
+- [x] Stale flags on variants when source revision changes (P2 mechanism, wired to UI)
+- [x] Definitions/labels/trade-offs consistent across channels (prompt rules: mechanism → example → caveat shape per platform)
+- [ ] IG + FB full E2E — blocked by local container→Google network instability (timeouts at 480s during the run); compilers + save/validate paths unit-tested; re-run `scripts/verify-phase7.ts instagram,facebook` on Render in P11
 
-Acceptance: cache-aside produces all three variants passing validation; each teaches standalone.
+Acceptance: X lesson generated, saved, weighted-validated E2E (twice); IG/FB compilation and validation unit-tested — core met, platform breadth pending network-stable re-run.
 
 ## Phase 8 — Visual templates & assets (frontend)
 

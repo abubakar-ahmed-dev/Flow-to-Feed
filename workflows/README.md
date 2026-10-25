@@ -14,7 +14,7 @@ Exported n8n workflow definitions live here:
 
 | Workflow | Tested n8n version | Status |
 | --- | --- | --- |
-| generate.json | 2.44.6 | v1 live: Gemma generation E2E verified (analysis → compiled diagram → callback → job succeeded) |
+| generate.json | 2.44.6 | v1 live: diagrams (3 modes) + social adaptations; X platform E2E verified, diagram E2E verified |
 | distribute.json | — | not yet implemented |
 
 ## Known n8n quirks (verified 2.44.6, 2026-10-24)
