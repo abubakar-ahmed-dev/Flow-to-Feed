@@ -1,15 +1,23 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 
-// explicit absolute paths — immune to terminal cwd
-dotenv.config({ path: path.resolve(process.cwd(), "apps/api/.env") });
-dotenv.config({ path: path.resolve(process.cwd(), ".env") });
-// tsx watch restarts only on .ts changes — re-read env files on boot too
-try {
-  for (const file of ["apps/api/.env", ".env"]) {
-    const full = path.resolve(process.cwd(), file);
-    for (const line of readFileSync(full, "utf8").split(/\r?\n/)) {
+// Resolve repo-root candidates from BOTH the source file location and the
+// process cwd — env loading works no matter which directory the terminal
+// was in when the server started.
+const here = path.dirname(fileURLToPath(import.meta.url)); // apps/api/src/config
+const fromSource = path.resolve(here, "../../../..");       // repo root
+const candidates = [
+  path.join(fromSource, "apps/api/.env"),
+  path.join(fromSource, ".env"),
+  path.resolve(process.cwd(), "apps/api/.env"),
+  path.resolve(process.cwd(), ".env"),
+];
+
+for (const file of candidates) {
+  try {
+    for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
       const m = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*)\s*$/);
       const key = m?.[1];
       const value = m?.[2];
@@ -17,8 +25,8 @@ try {
         process.env[key] = value.replace(/^["']|["']$/g, "");
       }
     }
-  }
-} catch { /* missing env files are fine if vars came from elsewhere */ }
+  } catch { /* candidate missing — try next */ }
+}
 
 function required(name: string): string {
   const value = process.env[name];
