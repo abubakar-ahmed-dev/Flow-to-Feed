@@ -1,18 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import mermaid from "mermaid";
 import {
   validateSocialContent,
   weightedXLength,
   X_WEIGHTED_LIMIT,
+  PLATFORM_LIMITS,
   type SocialContent,
   type Platform,
 } from "@flowtofeed/shared";
-import type { VariantRow } from "../types";
+import type { AssetRow, DiagramRow, VariantRow } from "../types";
 import { api, ApiError } from "../lib/api";
+import { supabase } from "../lib/supabase";
+import { buildCards } from "../render/cards";
+import { exportVariantImages } from "../render/export";
 
 interface Props {
   projectId: string;
   passage: string;
   variants: VariantRow[];
+  diagrams: DiagramRow[];
   onChanged: () => void;
 }
 
@@ -24,8 +30,8 @@ const PLATFORMS: { key: Platform; label: string; blurb: string }[] = [
   { key: "x", label: "X", blurb: "3–5 post thread" },
 ];
 
-/** Channel lessons: generate (job), save, edit — X counts are weighted, enforced backend-side too. */
-export default function VariantsSection({ projectId, passage, variants, onChanged }: Props) {
+/** Channel lessons: adapt (job), edit, export postable images to public URLs. */
+export default function VariantsSection({ projectId, passage, variants, diagrams, onChanged }: Props) {
   return (
     <section style={{ marginTop: "2rem" }}>
       <h3>Channel lessons</h3>
@@ -39,6 +45,7 @@ export default function VariantsSection({ projectId, passage, variants, onChange
             projectId={projectId}
             passage={passage}
             variant={variants.find((v) => v.platform === p.key)}
+            diagrams={diagrams}
             onChanged={onChanged}
           />
         ))}
@@ -48,10 +55,10 @@ export default function VariantsSection({ projectId, passage, variants, onChange
 }
 
 function PlatformCard({
-  platform, label, blurb, projectId, passage, variant, onChanged,
+  platform, label, blurb, projectId, passage, variant, diagrams, onChanged,
 }: {
   platform: Platform; label: string; blurb: string; projectId: string; passage: string;
-  variant?: VariantRow; onChanged: () => void;
+  variant?: VariantRow; diagrams: DiagramRow[]; onChanged: () => void;
 }) {
   const [jobState, setJobState] = useState<string | null>(null);
   const [jobError, setJobError] = useState<string | null>(null);
@@ -60,10 +67,21 @@ function PlatformCard({
   );
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [assets, setAssets] = useState<AssetRow[] | null>(null);
+  const [imgState, setImgState] = useState<string | null>(null);
 
+  const limits = PLATFORM_LIMITS[platform];
   const current = (draft ?? (variant?.content as SocialContent | undefined)) as SocialContent | undefined;
   const section = current?.[platform] as SocialContent[typeof platform] | undefined;
   const issues = section ? validateSocialContent(platform, section) : [];
+  const imagesStale = !!variant && (!assets || assets.length === 0 || assets.some((a) => a.revision < variant.revision));
+
+  useEffect(() => {
+    if (!variant) return;
+    api<{ assets: AssetRow[] }>(`/assets?variantId=${variant.id}`)
+      .then((r) => setAssets(r.assets))
+      .catch(() => setAssets(null));
+  }, [variant?.id]);
 
   async function generate() {
     setJobState("queued");
@@ -75,9 +93,9 @@ function PlatformCard({
         body: { platform, passage },
       });
       let current = job;
-      const deadline = Date.now() + 420_000;
+      const deadline = Date.now() + 900_000;
       while (current && (current.state === "queued" || current.state === "running") && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 3000));
+        await new Promise((r) => setTimeout(r, 4000));
         current = (await api<{ job: JobLite }>(`/jobs/${current.id}`)).job;
       }
       if (!current || current.state !== "succeeded") {
@@ -119,6 +137,44 @@ function PlatformCard({
     }
   }
 
+  async function approvedDiagramSvg(): Promise<string | null> {
+    const diagram = diagrams.find((d) => d.review_state === "approved" && d.mermaid);
+    if (!diagram) return null;
+    try {
+      const { svg } = await mermaid.render(`card-${++mermaidSeq}`, diagram.mermaid!);
+      return svg;
+    } catch {
+      return null;
+    }
+  }
+
+  async function generateImages() {
+    if (!variant || !section) return;
+    setImgState("0/" + imageCount());
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+      const diagramSvg = await approvedDiagramSvg();
+      const cards = buildCards(platform, section as never, diagramSvg);
+      await exportVariantImages({
+        projectId, platform, variantId: variant.id, cards, token,
+        onProgress: (done, total) => setImgState(`${done}/${total}`),
+      });
+      const r = await api<{ assets: AssetRow[] }>(`/assets?variantId=${variant.id}`);
+      setAssets(r.assets);
+      setImgState(null);
+    } catch (e) {
+      setImgState(null);
+      setNotice(e instanceof Error ? e.message : "Image export failed");
+    }
+  }
+
+  function imageCount(): number {
+    if (!section) return 0;
+    if (platform === "instagram") return (section as NonNullable<SocialContent["instagram"]>).slides.length;
+    return 1;
+  }
+
   const dirty = JSON.stringify(draft ?? null) !== JSON.stringify((variant?.content as SocialContent | undefined) ?? null);
 
   return (
@@ -143,9 +199,7 @@ function PlatformCard({
       {notice && <p style={{ color: "var(--text-muted)", margin: "0.5rem 0 0" }}>{notice}</p>}
 
       {!variant && !jobState && !jobError && (
-        <p style={{ color: "var(--text-muted)", margin: "0.5rem 0 0" }}>
-          Not generated yet.
-        </p>
+        <p style={{ color: "var(--text-muted)", margin: "0.5rem 0 0" }}>Not generated yet.</p>
       )}
 
       {draft && platform === "instagram" && section && (
@@ -171,9 +225,41 @@ function PlatformCard({
           ))}
         </ul>
       )}
+
+      {variant && (
+        <div style={{ borderTop: "1px solid var(--border)", marginTop: "0.75rem", paddingTop: "0.75rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <button
+              onClick={generateImages}
+              disabled={issues.length > 0 || imgState !== null}
+              title={`Exports ${limits.visual.perSlide ? "one image per slide" : "one image"} at ${limits.visual.width}×${limits.visual.height}`}
+            >
+              {imgState ? `Exporting ${imgState}…` : "Generate images"}
+            </button>
+            {imagesStale && assets && assets.length > 0 && (
+              <span style={{ color: "var(--warn)", fontSize: "0.85rem" }}>images out of date — regenerate</span>
+            )}
+          </div>
+          {assets && assets.length > 0 && (
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+              {assets.map((a) => (
+                <a key={a.id} href={a.public_url} target="_blank" rel="noreferrer" style={{ display: "block" }}>
+                  <img
+                    src={a.public_url}
+                    alt={`slide ${a.slide_index ?? 0}`}
+                    style={{ height: 120, borderRadius: 6, border: "1px solid var(--border)" }}
+                  />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
+let mermaidSeq = 0;
 
 function InstagramEditor({ content, onChange }: { content: NonNullable<SocialContent["instagram"]>; onChange: (c: NonNullable<SocialContent["instagram"]>) => void }) {
   return (

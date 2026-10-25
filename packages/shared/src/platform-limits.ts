@@ -13,7 +13,7 @@ export interface PlatformLimits {
   threadCount?: { min: number; max: number };
   /** Weighted character budget per X post; exact weighted counting is integrated separately. */
   xWeightedCharBudget?: number;
-  visual: { width: number; height: number; format: "png" | "jpeg" };
+  visual: { width: number; height: number; format: "png" | "jpeg"; mime: string; perSlide: boolean };
 }
 
 export const PLATFORM_LIMITS: Record<Platform, PlatformLimits> = {
@@ -21,19 +21,23 @@ export const PLATFORM_LIMITS: Record<Platform, PlatformLimits> = {
     displayName: "Instagram",
     captionCharLimit: 2200,
     slideCount: { min: 4, max: 6 },
-    visual: { width: 1080, height: 1350, format: "jpeg" },
+    visual: { width: 1080, height: 1350, format: "jpeg", mime: "image/jpeg", perSlide: true },
   },
   facebook: {
     displayName: "Facebook",
-    visual: { width: 1200, height: 1200, format: "jpeg" },
+    visual: { width: 1200, height: 1200, format: "jpeg", mime: "image/jpeg", perSlide: false },
   },
   x: {
     displayName: "X",
     threadCount: { min: 3, max: 5 },
     xWeightedCharBudget: 280,
-    visual: { width: 1200, height: 675, format: "png" },
+    visual: { width: 1200, height: 675, format: "png", mime: "image/png", perSlide: false },
   },
 };
+
+/** Upload policy enforced backend-side. */
+export const MAX_ASSET_BYTES = 10 * 1024 * 1024;
+export const ASSET_MIME_ALLOW = ["image/jpeg", "image/png"] as const;
 
 /** Practical input cap per generation request (characters). */
 export const SOURCE_CHAR_LIMIT = 20_000;

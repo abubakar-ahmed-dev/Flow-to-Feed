@@ -39,6 +39,18 @@ export interface JobRow {
   created_at: string;
 }
 
+export interface AssetRow {
+  id: string;
+  variant_id: string | null;
+  public_url: string;
+  width: number;
+  height: number;
+  mime_type: string;
+  slide_index: number | null;
+  revision: number;
+  created_at: string;
+}
+
 export interface VariantRow {
   id: string;
   project_id: string;

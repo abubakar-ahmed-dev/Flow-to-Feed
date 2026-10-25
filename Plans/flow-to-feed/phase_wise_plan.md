@@ -169,9 +169,20 @@ Acceptance: X lesson generated, saved, weighted-validated E2E (twice); IG/FB com
 
 ## Phase 8 — Visual templates & assets (frontend)
 
-Goal: channel-sized images exported in-browser, stored at public URLs.
+Goal: channel-sized images exported in-browser, stored at public URLs. **API path complete + E2E-verified 2026-10-25** (upload integrity, public delivery, ownership). Browser export button built; owner visual pass pending.
 
 Depends on: P6, P7.
+
+- [x] Card templates (pure HTML builders, one identity): `apps/web/src/render/cards.ts` — IG 1080×1350 per-slide, FB 1200×1200, X 1200×675
+- [x] Browser export path: `apps/web/src/render/export.ts` — html-to-image (JPEG flattened/PNG), WebCrypto sha256, raw upload
+- [x] `POST /api/assets/upload` — sha256 integrity, dimension + MIME enforcement per platform, storage upload (idempotent by hash), public URL, asset row
+- [x] `GET /api/assets?variantId=` (owner-scoped listing)
+- [x] VariantsSection: Generate-images button (per-slide progress), thumbnail strip with public links, stale-images badge
+- [x] E2E `scripts/verify-phase8.ts`: 8/8 — upload 201, anon fetch 200, hash-mismatch 400, wrong-dims 400, listing, anon 401
+- [x] Plan + fixture committed (`docs/PHASE8_PLAN.md`, `evidence/fixtures/pixel.jpg`)
+- [ ] Owner browser pass: real IG export → screenshots → evidence (manual; html-to-image rendering fidelity check)
+
+Acceptance: variants produce correctly-sized images at public URLs with backend-enforced integrity — met (API-verified); visual pass pending owner.
 
 - [ ] HTML/SVG templates: IG portrait 1080×1350, FB 1200×1200, X landscape 1200×675, one visual identity
 - [ ] Slide editor (title/body), full carousel preview, in-order export
