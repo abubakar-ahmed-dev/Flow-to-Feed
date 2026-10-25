@@ -61,20 +61,28 @@ function ensureSecrets(): void {
   }
 }
 
-function sh(cmd: string): string {
-  return execSync(cmd, { stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+function sh(cmd: string, timeoutMs = 60_000): string {
+  // every docker exec gets a hard timeout — n8n CLI calls can stall forever
+  // when the server is mid-bootstrap, and an unbounded execSync hangs the run
+  return execSync(cmd, { stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs }).toString().trim();
 }
 
 function waitCliReady(maxSeconds = 90): boolean {
   for (let i = 0; i < Math.ceil(maxSeconds / 3); i++) {
     try {
-      sh(`docker exec ${CONTAINER} sh -c "n8n list:workflow"`);
+      sh(`docker exec ${CONTAINER} sh -c "n8n list:workflow"`, 30_000);
       return true;
     } catch {
       execSync("sleep 3");
     }
   }
   return false;
+}
+
+function listWorkflowIds(): string[] {
+  const listing = sh(`docker exec ${CONTAINER} sh -c "n8n list:workflow"`, 45_000);
+  // v2.44.6 prints rows through the logger: `... | info | ID|Name {...}`
+  return [...listing.matchAll(/\|\s*info\s*\|\s*([A-Za-z0-9_-]+)\|/g)].map((m) => m[1]);
 }
 
 function probeWebhook(): string {
@@ -135,47 +143,54 @@ async function main() {
     process.exit(1);
   }
 
+  // deactivate every existing workflow first — only one workflow can own the
+  // /webhook/generate production path, and a stale active copy blocks the new one
+  for (const old of listWorkflowIds()) {
+    try {
+      sh(`docker exec ${CONTAINER} sh -c "n8n update:workflow --id=${old} --active=false"`, 30_000);
+      console.log(`deactivated stale workflow ${old}`);
+    } catch {
+      console.error(`could not deactivate stale workflow ${old} (may already be inactive)`);
+    }
+  }
+
   console.log(
     sh(
       `docker exec ${CONTAINER} sh -c "n8n import:workflow --input=/home/node/.n8n-import/generate.json"`,
+      90_000,
     ) || "workflow imported",
   );
 
-  // regular deployment mode ignores --activeState on import; activate explicitly,
-  // with retries — activation races server bootstrap on a fresh boot
+  const ids = listWorkflowIds();
+  const workflowId = ids.at(-1); // every import appends; last row is the fresh copy
+  if (!workflowId) {
+    console.error("no workflow id in list output after import");
+    process.exit(1);
+  }
+  console.log(
+    sh(
+      `docker exec ${CONTAINER} sh -c "n8n publish:workflow --id=${workflowId}"`,
+      60_000,
+    ) || `workflow ${workflowId} published`,
+  );
+  console.log(
+    sh(
+      `docker exec ${CONTAINER} sh -c "n8n update:workflow --id=${workflowId} --active=true"`,
+      60_000,
+    ) || `activation command sent for ${workflowId}`,
+  );
+
+  // one restart, then poll — production webhook routes only register at boot
+  sh(`docker restart ${CONTAINER}`, 120_000);
   let registered = false;
-  for (let attempt = 1; attempt <= 3 && !registered; attempt++) {
-    const listing = sh(`docker exec ${CONTAINER} sh -c "n8n list:workflow"`);
-    // v2.44.6 prints rows through the logger: `... | info | ID|Name {...}`
-    const ids = [...listing.matchAll(/\|\s*info\s*\|\s*([A-Za-z0-9_-]+)\|/g)].map((m) => m[1]);
-    const workflowId = ids.at(-1); // freshly imported workflow is last in the list
-    if (!workflowId) {
-      console.error(`attempt ${attempt}: no workflow id in list output`);
-      execSync("sleep 5");
-      continue;
+  for (let i = 0; i < 40; i++) {
+    const code = probeWebhook();
+    if (code !== "404" && code !== "000") {
+      console.log(`webhook registered (probe ${code})`);
+      registered = true;
+      break;
     }
-    console.log(
-      sh(
-        `docker exec ${CONTAINER} sh -c "n8n publish:workflow --id=${workflowId}"`,
-      ) || `workflow ${workflowId} published`,
-    );
-    console.log(
-      sh(
-        `docker exec ${CONTAINER} sh -c "n8n update:workflow --id=${workflowId} --active=true"`,
-      ) || `activation command sent for ${workflowId}`,
-    );
-    sh(`docker restart ${CONTAINER}`);
-    execSync("sleep 6");
-    // webhook routes register at boot; healthz answers before routes do
-    for (let i = 0; i < 30; i++) {
-      const code = probeWebhook();
-      if (code !== "404" && code !== "000") {
-        console.log(`webhook registered (probe ${code}) on attempt ${attempt}`);
-        registered = true;
-        break;
-      }
-      execSync("sleep 3");
-    }
+    execSync("sleep 3");
   }
   if (!registered) {
     console.error("webhook never registered — check n8n UI for the workflow's active toggle");
