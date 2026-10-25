@@ -6,6 +6,7 @@ const input = {
   passage: String(b.passage || ''),
   instruction: b.instruction ? String(b.instruction) : undefined,
   priorMermaid: b.priorMermaid ? String(b.priorMermaid) : undefined,
+  priorContent: b.priorContent ? String(b.priorContent) : undefined,
   renderError: b.renderError ? String(b.renderError) : undefined,
 };
-return [{ json: { jobId: String(b.jobId || ''), mode: input.mode, prompt: buildPrompt(input) } }];
+return [{ json: { jobId: String(b.jobId || ''), operation: input.operation, mode: input.mode, prompt: buildPrompt(input) } }];

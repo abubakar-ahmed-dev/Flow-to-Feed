@@ -3,11 +3,13 @@ import { z } from "zod";
 import {
   createProjectSchema,
   generateDiagramSchema,
+  generateVariantSchema,
   updateProjectSchema,
 } from "@flowtofeed/shared";
 import { asyncHandler } from "../lib/asyncHandler.js";
 import { supabaseAdmin } from "../db.js";
 import { triggerGeneration } from "../services/n8n.js";
+import { startSocialAdapt } from "../services/variants.js";
 import {
   createProject,
   getProject,
@@ -113,5 +115,28 @@ projectsRouter.post(
       return;
     }
     res.status(202).json({ job });
+  }),
+);
+
+// Start a social adaptation job for one channel (202 + job id).
+projectsRouter.post(
+  "/:id/social",
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const input = generateVariantSchema.omit({ projectId: true }).parse(req.body);
+
+    const result = await startSocialAdapt(
+      req.userId!,
+      id,
+      input.platform,
+      input.passage,
+      input.instruction,
+      triggerGeneration,
+    );
+    if ("error" in result) {
+      res.status(404).json({ error: { code: "not_found", message: "Project not found" } });
+      return;
+    }
+    res.status(202).json({ job: result.job });
   }),
 );

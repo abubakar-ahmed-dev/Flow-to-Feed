@@ -7,6 +7,7 @@ import { SOURCE_CHAR_LIMIT } from "@flowtofeed/shared";
 import type { DiagramMode } from "@flowtofeed/shared";
 import type { DiagramRow, JobResponse, JobRow, ProjectDetailResponse } from "../types";
 import DiagramReview from "../components/DiagramReview";
+import VariantsSection from "../components/VariantsSection";
 
 const MODES: DiagramMode[] = ["architecture", "flowchart", "sequence"];
 
@@ -262,10 +263,12 @@ export default function ProjectEditor() {
         <p style={{ color: "var(--text-muted)" }}>No diagrams yet.</p>
       )}
 
-      <h3 style={{ marginTop: "2rem" }}>Channel lessons</h3>
-      <p style={{ color: "var(--text-muted)" }}>
-        Instagram carousel · Facebook card · X thread — generated in the channel-lessons phase.
-      </p>
+      <VariantsSection
+        projectId={detail.project.id}
+        passage={passage?.text || markdown.slice(0, 4000)}
+        variants={detail.variants}
+        onChanged={() => void load()}
+      />
     </main>
   );
 }

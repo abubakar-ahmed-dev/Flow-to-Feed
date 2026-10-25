@@ -10,6 +10,7 @@ const strip = (s) =>
 const read = (p) => readFileSync("workflows/src/" + p, "utf8").trimEnd();
 
 const compiler = strip(read("analysis-compiler.js"));
+const socialCompiler = strip(read("social-compiler.js"));
 const promptBuilder = strip(read("prompt-builder.js"));
 const validateBody = read("validate-node.js");
 const prepareBody = read("prepare-node.js");
@@ -23,8 +24,9 @@ const compilerWithNormalized = compiler.replace(
 const wf = JSON.parse(readFileSync("workflows/generate.json", "utf8"));
 for (const node of wf.nodes) {
   if (node.id === "prepare") node.parameters.jsCode = promptBuilder + "\n\n" + prepareBody;
-  if (node.id === "validate") node.parameters.jsCode = compilerWithNormalized + "\n\n" + validateBody;
-  if (node.id === "validate-repair") node.parameters.jsCode = compilerWithNormalized + "\n\n" + validateBody;
+  if (node.id === "validate" || node.id === "validate-repair") {
+    node.parameters.jsCode = compilerWithNormalized + "\n\n" + socialCompiler + "\n\n" + validateBody;
+  }
 }
 
 writeFileSync("workflows/generate.json", JSON.stringify(wf, null, 2) + "\n");
