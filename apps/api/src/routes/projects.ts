@@ -92,6 +92,7 @@ projectsRouter.post(
     try {
       await triggerGeneration({
         jobId: job.id,
+        operation: "diagram_generate",
         mode: input.mode,
         passage: input.passage,
         instruction: input.instruction,

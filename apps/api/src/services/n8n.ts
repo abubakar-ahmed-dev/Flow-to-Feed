@@ -2,9 +2,12 @@ import { env } from "../config/env.js";
 
 export interface GenerationTrigger {
   jobId: string;
+  operation: "diagram_generate" | "diagram_repair";
   mode: string;
   passage: string;
   instruction?: string;
+  priorMermaid?: string;
+  renderError?: string;
 }
 
 /**
@@ -26,10 +29,12 @@ export async function triggerGeneration(trigger: GenerationTrigger): Promise<voi
       },
       body: JSON.stringify({
         jobId: trigger.jobId,
-        operation: "diagram_generate",
+        operation: trigger.operation,
         mode: trigger.mode,
         passage: trigger.passage,
         instruction: trigger.instruction,
+        priorMermaid: trigger.priorMermaid,
+        renderError: trigger.renderError,
       }),
       signal: controller.signal,
     });
