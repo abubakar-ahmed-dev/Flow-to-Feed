@@ -31,6 +31,13 @@ export default function ProjectEditor() {
   const [generating, setGenerating] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const diagramSourceRef = useRef<HTMLTextAreaElement>(null);
+
+  function captureSelectionFrom(el: HTMLTextAreaElement) {
+    const { selectionStart, selectionEnd } = el;
+    if (selectionEnd - selectionStart < 8) { setPassage(null); return; }
+    setPassage({ text: markdown.slice(selectionStart, selectionEnd), start: selectionStart, end: selectionEnd });
+  }
 
   const load = useCallback(async () => {
     try {
@@ -72,10 +79,7 @@ export default function ProjectEditor() {
 
   function captureSelection() {
     const el = textareaRef.current;
-    if (!el) return;
-    const { selectionStart, selectionEnd } = el;
-    if (selectionEnd - selectionStart < 8) { setPassage(null); return; }
-    setPassage({ text: markdown.slice(selectionStart, selectionEnd), start: selectionStart, end: selectionEnd });
+    if (el) captureSelectionFrom(el);
   }
 
   async function saveSource(): Promise<boolean> {
@@ -256,18 +260,29 @@ export default function ProjectEditor() {
           </p>
 
           <div className="card">
-            <h3 className="small muted" style={{ marginTop: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>Selected passage</h3>
+            <h3 className="small muted" style={{ marginTop: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>1 · Highlight the passage below</h3>
+            <p className="small muted" style={{ margin: "0 0 0.5rem" }}>
+              Select at least 8 characters — e.g. the Mechanism section.
+            </p>
+            <textarea
+              ref={diagramSourceRef}
+              value={markdown}
+              readOnly
+              onSelect={captureSelectionFrom}
+              rows={12}
+              spellCheck={false}
+              style={{ width: "100%" }}
+            />
             {passage ? (
-              <p style={{ margin: "0 0 0.75rem" }}>
-                “{passage.text.slice(0, 140)}{passage.text.length > 140 ? "…" : ""}”
-                <span className="chip" style={{ marginLeft: "0.75rem" }}>{passage.text.length.toLocaleString()} chars</span>
+              <p style={{ margin: "0.75rem 0 0" }}>
+                <span className="chip ok">passage selected · {passage.text.length.toLocaleString()} chars</span>
               </p>
             ) : (
-              <p className="muted" style={{ margin: "0 0 0.75rem" }}>
-                Go back to step 1 and select a passage in the source (8+ characters). Selected text carries over automatically.
-              </p>
+              <p className="muted small" style={{ margin: "0.75rem 0 0" }}>Nothing selected yet.</p>
             )}
-            <div className="row">
+
+            <h3 className="small muted" style={{ marginTop: "1.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>2 · Choose mode and generate</h3>
+            <div className="row" style={{ marginTop: "0.5rem" }}>
               <select value={mode} onChange={(e) => setMode(e.target.value as DiagramMode)} style={{ width: "auto" }}>
                 {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
