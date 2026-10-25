@@ -1,4 +1,20 @@
-import "dotenv/config";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import dotenv from "dotenv";
+
+// explicit absolute paths — immune to terminal cwd
+dotenv.config({ path: path.resolve(process.cwd(), "apps/api/.env") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+// tsx watch restarts only on .ts changes — re-read env files on boot too
+try {
+  for (const file of ["apps/api/.env", ".env"]) {
+    const full = path.resolve(process.cwd(), file);
+    for (const line of readFileSync(full, "utf8").split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+    }
+  }
+} catch { /* missing env files are fine if vars came from elsewhere */ }
 
 function required(name: string): string {
   const value = process.env[name];
