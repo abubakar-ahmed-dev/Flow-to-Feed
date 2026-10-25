@@ -43,6 +43,22 @@ export const applyRepairSchema = z.object({
   jobId: z.string().uuid(),
 });
 
+export const generateVariantSchema = z.object({
+  projectId: z.string().uuid(),
+  platform: z.enum(["instagram", "facebook", "x"]),
+  passage: z.string().trim().min(8, "Select a longer passage").max(4000),
+  instruction: z.string().trim().max(500).optional(),
+});
+
+export const saveVariantFromJobSchema = z.object({
+  projectId: z.string().uuid(),
+  jobId: z.string().uuid(),
+});
+
+export const updateVariantSchema = z.object({
+  content: z.record(z.string(), z.unknown()),
+});
+
 export const jobEventSchema = z.object({
   eventId: z.string().min(8).max(200),
   jobId: z.string().uuid(),

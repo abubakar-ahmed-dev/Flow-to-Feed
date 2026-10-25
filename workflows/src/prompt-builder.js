@@ -27,8 +27,73 @@ const MODE_GOAL = {
   sequence: 'Analyze the passage for a sequence diagram (who interacts with whom, in order).',
 };
 
+const SOCIAL_RULES = [
+  '1. Teach from the passage only: mechanism first, then a concrete example, then the caveat. Never invent features, products, or numbers.',
+  '2. Preserve the passage technical terms exactly.',
+  '3. The lesson must stand alone — a reader who never sees the passage still learns the concept.',
+  '4. Plain text only; no markdown, no hashtags unless asked, no emoji spam (at most one per slide).',
+].join('\n');
+
+const SOCIAL_SHAPE = {
+  instagram: [
+    'Title: <3-6 word carousel title>',
+    'Caption: <1-2 sentence caption for the post, ends with a takeaway>',
+    'Slide 1: <heading> | <1-2 sentence body teaching one point>',
+    'Slide 2: <heading> | <body>',
+    'Slide 3: <heading> | <body>  (mechanism)',
+    'Slide 4: <heading> | <body>  (example)',
+    'Slide 5: <heading> | <body>  (caveat or trade-off)',
+  ],
+  x: [
+    'Title: <internal thread title>',
+    'Post 1: <hook + what the reader will learn, max 240 characters>',
+    'Post 2: <mechanism, max 240 characters>',
+    'Post 3: <example, max 240 characters>',
+    'Post 4: <caveat/trade-off + takeaway, max 240 characters>',
+  ],
+  facebook: [
+    'Title: <post title>',
+    'Paragraph 1: <hook: what this explains and why it matters>',
+    'Paragraph 2: <the mechanism, step by step>',
+    'Paragraph 3: <concrete example grounded in the passage>',
+    'Paragraph 4: <caveat/trade-off and takeaway>',
+  ],
+};
+
+function buildSocialPrompt(input) {
+  const platform = input.mode;
+  return [
+    (SOCIAL_SHAPE[platform] ? 'Adapt the passage into a ' + platform + ' lesson.' : 'Analyze the passage.'),
+    'Reply ONLY with these labeled lines, nothing else - no markdown headings, no extra commentary:',
+    '',
+    (SOCIAL_SHAPE[platform] || []).join('\n'),
+    '',
+    'Rules:',
+    SOCIAL_RULES,
+    '',
+    'Passage:',
+    input.passage,
+    '',
+    'Instruction from the author:',
+    input.instruction || 'None.',
+  ].join('\n');
+}
+
 export function buildPrompt(input) {
   const operation = input.operation || 'diagram_generate';
+
+  if (operation === 'social_adapt') {
+    if (input.priorContent && input.renderError) {
+      return [
+        'Your previous reply could not be used. Problem: ' + input.renderError,
+        'Redo the adaptation for the SAME platform, following the labeled-line format exactly. No markdown, no commentary.',
+        '',
+        buildSocialPrompt(input),
+      ].join('\n');
+    }
+    return buildSocialPrompt(input);
+  }
+
   const lines = [];
   if (operation === 'diagram_repair') {
     lines.push(

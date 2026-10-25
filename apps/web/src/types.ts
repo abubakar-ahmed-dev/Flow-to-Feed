@@ -39,13 +39,26 @@ export interface JobRow {
   created_at: string;
 }
 
+export interface VariantRow {
+  id: string;
+  project_id: string;
+  platform: "instagram" | "facebook" | "x";
+  source_revision: string;
+  revision: number;
+  // channel payload; shape depends on platform (see @flowtofeed/shared SocialContent)
+  content: Record<string, unknown>;
+  stale: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ProjectDetailResponse {
   project: ProjectSummary & {
     source_markdown: string;
     source_url: string | null;
   };
   diagrams: DiagramRow[];
-  variants: unknown[];
+  variants: VariantRow[];
   jobs: JobRow[];
 }
 

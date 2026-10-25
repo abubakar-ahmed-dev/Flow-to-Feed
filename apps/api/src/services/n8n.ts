@@ -2,7 +2,7 @@ import { env } from "../config/env.js";
 
 export interface GenerationTrigger {
   jobId: string;
-  operation: "diagram_generate" | "diagram_repair";
+  operation: "diagram_generate" | "diagram_repair" | "social_adapt";
   mode: string;
   passage: string;
   instruction?: string;
