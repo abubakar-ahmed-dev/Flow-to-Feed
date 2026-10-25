@@ -33,58 +33,58 @@ export default function Dashboard() {
   }
 
   return (
-    <main style={{ maxWidth: 860, margin: "2rem auto", padding: "0 1rem" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ margin: 0 }}>FlowToFeed</h1>
-        <button onClick={() => signOut()} style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          Sign out
-        </button>
+    <main className="page">
+      <header className="topbar">
+        <div className="wordmark">Flow<span>ToFeed</span></div>
+        <button className="ghost small" onClick={() => signOut()}>Sign out</button>
       </header>
 
-      <section style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem" }}>
-        <div className="card" style={{ flex: 1, padding: "0.6rem 1rem" }}>
-          <strong>Channels</strong>
-          <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: 4 }}>
-            Instagram · Facebook · X — connect via Buffer (distribution phase)
-          </div>
+      <section className="hero">
+        <h1>One explanation.<br />Every channel.</h1>
+        <p>
+          Paste a technical explanation once — get an editable diagram and
+          ready-to-post lessons for Instagram, Facebook, and X.
+        </p>
+        <div style={{ marginTop: "2rem" }}>
+          <button onClick={createProject} disabled={creating}>
+            {creating ? "Creating…" : "New project"}
+          </button>
         </div>
       </section>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2rem" }}>
-        <h2 style={{ margin: 0 }}>Projects</h2>
-        <button onClick={createProject} disabled={creating}>
-          {creating ? "Creating…" : "New project"}
-        </button>
-      </div>
+      {error && <p className="status-danger">{error}</p>}
 
-      {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
-      {projects === null && !error && <p style={{ color: "var(--text-muted)" }}>Loading…</p>}
-      {projects?.length === 0 && (
-        <p style={{ color: "var(--text-muted)" }}>
-          No projects yet — create one and paste a technical explanation.
-        </p>
+      {projects && projects.length > 0 && (
+        <>
+          <h2 style={{ margin: "3rem 0 1.25rem" }}>Your projects</h2>
+          <div style={{ display: "grid", gap: "1rem" }}>
+            {projects.map((p) => (
+              <a
+                key={p.id}
+                href={`/projects/${p.id}`}
+                onClick={(e) => { e.preventDefault(); navigate(`/projects/${p.id}`); }}
+                className="card"
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", textDecoration: "none", color: "inherit" }}
+              >
+                <div>
+                  <strong style={{ fontSize: "1.05rem" }}>{p.title}</strong>
+                  <div className="small muted" style={{ marginTop: "0.2rem" }}>
+                    updated {new Date(p.updated_at).toLocaleString()}
+                    {p.is_public_sample && " · public sample"}
+                  </div>
+                </div>
+                <span style={{ color: "var(--accent)", fontWeight: 700 }}>→</span>
+              </a>
+            ))}
+          </div>
+        </>
       )}
 
-      <div style={{ display: "grid", gap: "0.75rem", marginTop: "1rem" }}>
-        {projects?.map((p) => (
-          <a
-            key={p.id}
-            href={`/projects/${p.id}`}
-            onClick={(e) => {
-              e.preventDefault();
-              navigate(`/projects/${p.id}`);
-            }}
-            className="card"
-            style={{ display: "block", textDecoration: "none", color: "inherit" }}
-          >
-            <strong>{p.title}</strong>
-            <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-              updated {new Date(p.updated_at).toLocaleString()}
-              {p.is_public_sample && " · public sample"}
-            </div>
-          </a>
-        ))}
-      </div>
+      {projects && projects.length === 0 && !error && (
+        <p className="muted" style={{ marginTop: "2rem" }}>
+          No projects yet — create one above to start.
+        </p>
+      )}
     </main>
   );
 }

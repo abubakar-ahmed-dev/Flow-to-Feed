@@ -24,17 +24,24 @@ export default function SignIn() {
   }
 
   return (
-    <main style={{ maxWidth: 380, margin: "5rem auto", padding: "0 1rem" }}>
-      <h1>FlowToFeed</h1>
-      <p style={{ color: "var(--text-muted)" }}>Owner sign-in</p>
-      <form onSubmit={submit} className="card" style={{ display: "grid", gap: "0.75rem" }}>
+    <main className="page page-narrow" style={{ marginTop: "6rem" }}>
+      <div className="wordmark" style={{ marginBottom: "2.5rem" }}>
+        Flow<span>ToFeed</span>
+      </div>
+      <h1>{mode === "signin" ? "Welcome back" : "Create your studio"}</h1>
+      <p className="muted" style={{ marginTop: "0.75rem", marginBottom: "2rem" }}>
+        {mode === "signin"
+          ? "Sign in to your content studio."
+          : "One account. Your explanations stay yours."}
+      </p>
+
+      <form onSubmit={submit} className="card" style={{ display: "grid", gap: "1rem" }}>
         <input
           type="email"
           placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={inputStyle}
         />
         <input
           type="password"
@@ -43,34 +50,19 @@ export default function SignIn() {
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={6}
-          style={inputStyle}
         />
-        {error && <span style={{ color: "var(--danger)" }}>{error}</span>}
+        {error && <span className="status-danger">{error}</span>}
         <button type="submit" disabled={busy}>
           {busy ? "…" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
         <a
           href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            setMode(mode === "signin" ? "signup" : "signin");
-            setError(null);
-          }}
-          style={{ fontSize: "0.85rem" }}
+          onClick={(e) => { e.preventDefault(); setMode(mode === "signin" ? "signup" : "signin"); setError(null); }}
+          className="small"
         >
-          {mode === "signin"
-            ? "No account yet? Create one"
-            : "Have an account? Sign in"}
+          {mode === "signin" ? "No account yet? Create one" : "Have an account? Sign in"}
         </a>
       </form>
     </main>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  background: "var(--bg)",
-  color: "var(--text)",
-  border: "1px solid var(--border)",
-  borderRadius: 6,
-  padding: "0.5rem 0.75rem",
-};
