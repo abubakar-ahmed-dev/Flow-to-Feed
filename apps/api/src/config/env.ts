@@ -11,7 +11,11 @@ try {
     const full = path.resolve(process.cwd(), file);
     for (const line of readFileSync(full, "utf8").split(/\r?\n/)) {
       const m = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*)\s*$/);
-      if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+      const key = m?.[1];
+      const value = m?.[2];
+      if (key && value !== undefined && process.env[key] === undefined) {
+        process.env[key] = value.replace(/^["']|["']$/g, "");
+      }
     }
   }
 } catch { /* missing env files are fine if vars came from elsewhere */ }
