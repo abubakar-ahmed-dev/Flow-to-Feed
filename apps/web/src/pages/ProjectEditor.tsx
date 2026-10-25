@@ -33,7 +33,7 @@ export default function ProjectEditor() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const diagramSourceRef = useRef<HTMLTextAreaElement>(null);
 
-  function captureSelectionFrom(el: HTMLTextAreaElement) {
+  function captureSelectionFrom(el: HTMLTextAreaElement | null) {
     const { selectionStart, selectionEnd } = el;
     if (selectionEnd - selectionStart < 8) { setPassage(null); return; }
     setPassage({ text: markdown.slice(selectionStart, selectionEnd), start: selectionStart, end: selectionEnd });
@@ -268,7 +268,7 @@ export default function ProjectEditor() {
               ref={diagramSourceRef}
               value={markdown}
               readOnly
-              onSelect={captureSelectionFrom}
+              onSelect={(e) => captureSelectionFrom(e.currentTarget)}
               rows={12}
               spellCheck={false}
               style={{ width: "100%" }}
