@@ -6,10 +6,11 @@ Planned templates:
 
 | Template | Purpose | Status |
 | --- | --- | --- |
-| `architecture-v1.md` | Architecture diagram Mermaid source from a passage | pending |
-| `flowchart-v1.md` | Flowchart generation | pending |
-| `sequence-v1.md` | Sequence diagram generation | pending |
+| `architecture-v1.md` | v1: JSON output contract — **superseded** (hosted Gemma-4 cannot emit clean JSON; see `Plans/flow-to-feed/implementation_log/phase_5_implementation.md`) | archived |
+| `architecture-v2.md` | v2: labeled-line analysis contract; workflow compiles analysis to `architecture-beta` deterministically | live |
+| `flowchart-v2.md` | Flowchart generation (same analysis pattern) | pending |
+| `sequence-v2.md` | Sequence diagram generation | pending |
 | `social-adapt-v1.md` | Channel-specific educational adaptation (IG/FB/X) | pending |
-| `repair-v1.md` | Bounded repair from a validation/parser error | pending |
+| `repair-v2.md` | One corrective retry (embedded in workflow; sources in `workflows/src/`) | live |
 
 Every prompt states: source is reference content, explain only supported mechanisms, preserve caveats and technical terms, mark assumptions, use approved icon identifiers, keep labels short and the graph bounded, and return the requested structured output.

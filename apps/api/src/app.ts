@@ -6,6 +6,7 @@ import { healthRouter } from "./routes/health.js";
 import { projectsRouter } from "./routes/projects.js";
 import { jobsRouter } from "./routes/jobs.js";
 import { internalRouter } from "./routes/internal.js";
+import { diagramsRouter } from "./routes/diagrams.js";
 import { requireOwner } from "./middleware/auth.js";
 
 export function createApp(): Express {
@@ -23,6 +24,7 @@ export function createApp(): Express {
   app.use("/api", healthRouter);
   app.use("/api/projects", requireOwner, projectsRouter);
   app.use("/api/jobs", requireOwner, jobsRouter);
+  app.use("/api/diagrams", requireOwner, diagramsRouter);
   // internal routes carry their own shared-secret auth
   app.use("/api/internal", internalRouter);
 

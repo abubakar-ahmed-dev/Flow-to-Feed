@@ -14,7 +14,7 @@ Exported n8n workflow definitions live here:
 
 | Workflow | Tested n8n version | Status |
 | --- | --- | --- |
-| generate.json | 2.44.6 | v0 round-trip verified (webhook → callback → job state, idempotent replay) |
+| generate.json | 2.44.6 | v1 live: Gemma generation E2E verified (analysis → compiled diagram → callback → job succeeded) |
 | distribute.json | — | not yet implemented |
 
 ## Known n8n quirks (verified 2.44.6, 2026-10-24)

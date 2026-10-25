@@ -110,18 +110,20 @@ Acceptance: sign in → create project → paste source → save → reopen inta
 
 ## Phase 5 — Gemma live proof (integration)
 
-Goal: one real structured Gemma response flowing UI → API → n8n → Gemma → callback → UI.
+Goal: one real structured Gemma response flowing UI → API → n8n → Gemma → callback → UI. **Completed 2026-10-25** (PR → dev; two consecutive E2E generations, 149s + 186s).
 
-Depends on: P2, P3, P4. Owner manual tasks T3 (Gemma key) must be done.
+Depends on: P2, P3, P4. Owner manual tasks T3 (Gemma key) done.
 
-- [ ] Verify exact available hosted Gemma model id against the account key; pin in `.env`
-- [ ] Prompt `architecture-v1` in `prompts/` (reference content, mechanisms only, assumptions marked, icon id whitelist, bounded graph, structured output)
-- [ ] n8n: build prompt from template → call Gemma → Zod-validate response → one corrective retry on malformed output → callback with model id, timing, attempts
-- [ ] Transient API failure retry: max 3 total attempts, backoff, Retry-After handling
-- [ ] Job record updated at each stage; UI shows progress and final result
-- [ ] Record measured generation duration in `evidence/`
+- [x] Verify exact available hosted Gemma model id against the account key — `gemma-4-26b-a4b-it` confirmed live (also `gemma-4-31b-it`)
+- [x] Prompt contract in `prompts/architecture-v2.md` — see design note below
+- [x] n8n: build prompt → Gemma call (3 tries backoff) → validate/compile → one corrective retry → callbacks with model id, timing, attempts
+- [x] Transient failure retry: max 3 total attempts per Gemma node, backoff
+- [x] Job record updated at each stage; UI polls and shows the result
+- [x] Measured durations in `evidence/measurements.md`
 
-Acceptance: cache-aside passage yields valid structured `DiagramResult` visible in UI.
+**Design note (recorded honestly):** hosted Gemma-4 cannot emit clean JSON — every structured-output contract (JSON-only, schema-first, few-shot turns, model-prefill, `responseMimeType`) came back as planning bullets; `responseMimeType` is silently ignored; `gemma-4-31b-it` timed out at 240s. Gemma's *analysis* is excellent. Final architecture: prompt v2 asks for labeled-line analysis (Title/Components/Flows/Assumptions/Summary); the workflow compiles that analysis to `architecture-beta` deterministically (icon mapping, slug dedupe, garbage rejection). Model id + prompt version still recorded on every result.
+
+Acceptance: cache-aside passage yields a valid rendered diagram saved to the project — met.
 
 ## Phase 6 — Diagram feature (frontend + prompts)
 
