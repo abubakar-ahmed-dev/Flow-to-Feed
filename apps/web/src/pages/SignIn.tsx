@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../auth";
+import { supabase } from "../lib/supabase";
 
 export default function SignIn() {
   const { signIn, signUp } = useAuth();
@@ -14,8 +15,21 @@ export default function SignIn() {
     setBusy(true);
     setError(null);
     try {
-      if (mode === "signin") await signIn(email, password);
-      else await signUp(email, password);
+      if (mode === "signin") {
+        // supabase returns {user: null, session: null} with NO error when the
+        // address is unconfirmed — surface that instead of failing silently.
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        if (!data.session) {
+          throw new Error("Email not confirmed. Check your inbox — or turn off 'Confirm email' in Supabase (Authentication → Sign In / Providers).");
+        }
+      } else {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        if (!data.session) {
+          throw new Error("Account created — but email confirmation is still required. Check your inbox, or disable 'Confirm email' in Supabase (Authentication → Sign In / Providers).");
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Auth failed");
     } finally {
