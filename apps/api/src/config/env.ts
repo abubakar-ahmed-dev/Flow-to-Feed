@@ -9,7 +9,9 @@ function required(name: string): string {
 }
 
 function optional(name: string): string | undefined {
-  return process.env[name];
+  // empty string counts as missing so `??` fallbacks actually fall through
+  const value = process.env[name];
+  return value && value.trim() ? value : undefined;
 }
 
 /**
