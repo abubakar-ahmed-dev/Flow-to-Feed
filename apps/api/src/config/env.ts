@@ -47,8 +47,9 @@ export const env = {
   },
 
   gemma: {
-    apiKey: optional("GEMMA_API_KEY"),
-    model: optional("GEMMA_MODEL") ?? "gemma-4-26b-a4b-it",
+    // GEMMA_* names canonical; LLM_* accepted (owner's generic aliases)
+    apiKey: optional("GEMMA_API_KEY") ?? optional("LLM_API_KEY"),
+    model: optional("GEMMA_MODEL") ?? optional("LLM_MODEL") ?? "gemma-4-26b-a4b-it",
   },
 
   buffer: {

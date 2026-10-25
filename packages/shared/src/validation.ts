@@ -17,6 +17,24 @@ export const createProjectSchema = z.object({
 
 export const updateProjectSchema = createProjectSchema.partial();
 
+export const generateDiagramSchema = z.object({
+  mode: z.enum(["architecture", "flowchart", "sequence"]),
+  passage: z.string().trim().min(8, "Select a longer passage").max(4000),
+  instruction: z.string().trim().max(500).optional(),
+});
+
+export const saveDiagramFromJobSchema = z.object({
+  projectId: z.string().uuid(),
+  jobId: z.string().uuid(),
+});
+
+export const updateDiagramSchema = z.object({
+  title: z.string().trim().min(1).max(300).optional(),
+  mermaid: z.string().min(1).max(20_000).optional(),
+  render_state: z.enum(["pending", "rendered", "failed"]).optional(),
+  review_state: z.enum(["draft", "approved", "rejected"]).optional(),
+});
+
 export const jobEventSchema = z.object({
   eventId: z.string().min(8).max(200),
   jobId: z.string().uuid(),

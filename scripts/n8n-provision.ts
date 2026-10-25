@@ -65,6 +65,29 @@ function sh(cmd: string): string {
   return execSync(cmd, { stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
 }
 
+function waitCliReady(maxSeconds = 90): boolean {
+  for (let i = 0; i < Math.ceil(maxSeconds / 3); i++) {
+    try {
+      sh(`docker exec ${CONTAINER} sh -c "n8n list:workflow"`);
+      return true;
+    } catch {
+      execSync("sleep 3");
+    }
+  }
+  return false;
+}
+
+function probeWebhook(): string {
+  try {
+    return execSync(
+      `curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:5678/webhook/generate -H "x-webhook-secret: probe" -d "{}"`,
+      { stdio: ["ignore", "pipe", "ignore"] },
+    ).toString().trim();
+  } catch {
+    return "000";
+  }
+}
+
 async function main() {
   ensureSecrets();
   const env = loadEnv(API_ENV);
@@ -91,7 +114,7 @@ async function main() {
   // keeps the placeholder.
   writeFileSync(
     path.join(IMPORT_DIR, "generate.json"),
-    readFileSync(WORKFLOW_SRC, "utf8").replace(
+    readFileSync(WORKFLOW_SRC, "utf8").replaceAll(
       "REPLACE_N8N_CALLBACK_SECRET",
       callbackSecret,
     ),
@@ -99,35 +122,66 @@ async function main() {
 
   sh(`docker exec ${CONTAINER} mkdir -p /home/node/.n8n-import`);
   sh(`docker cp "${IMPORT_DIR}/." ${CONTAINER}:/home/node/.n8n-import/`);
+
+  if (!waitCliReady()) {
+    console.error("n8n CLI never became ready — is the container healthy?");
+    process.exit(1);
+  }
   console.log(
     sh(`docker exec ${CONTAINER} sh -c "n8n import:credentials --input=/home/node/.n8n-import/cred-webhook.json"`) || "imported webhook credential",
   );
+  if (!waitCliReady()) {
+    console.error("n8n CLI never became ready — is the container healthy?");
+    process.exit(1);
+  }
+
   console.log(
     sh(
       `docker exec ${CONTAINER} sh -c "n8n import:workflow --input=/home/node/.n8n-import/generate.json"`,
     ) || "workflow imported",
   );
-  // regular deployment mode ignores --activeState on import; activate explicitly
-  const listing = sh(`docker exec ${CONTAINER} sh -c "n8n list:workflow"`);
-  console.log(listing);
-  const ids = [...listing.matchAll(/^([^\s|]+)\s*\|/gm)].map((m) => m[1]);
-  const workflowId = ids.at(-1); // freshly imported workflow is last in the list
-  if (workflowId) {
+
+  // regular deployment mode ignores --activeState on import; activate explicitly,
+  // with retries — activation races server bootstrap on a fresh boot
+  let registered = false;
+  for (let attempt = 1; attempt <= 3 && !registered; attempt++) {
+    const listing = sh(`docker exec ${CONTAINER} sh -c "n8n list:workflow"`);
+    // v2.44.6 prints rows through the logger: `... | info | ID|Name {...}`
+    const ids = [...listing.matchAll(/\|\s*info\s*\|\s*([A-Za-z0-9_-]+)\|/g)].map((m) => m[1]);
+    const workflowId = ids.at(-1); // freshly imported workflow is last in the list
+    if (!workflowId) {
+      console.error(`attempt ${attempt}: no workflow id in list output`);
+      execSync("sleep 5");
+      continue;
+    }
+    console.log(
+      sh(
+        `docker exec ${CONTAINER} sh -c "n8n publish:workflow --id=${workflowId}"`,
+      ) || `workflow ${workflowId} published`,
+    );
     console.log(
       sh(
         `docker exec ${CONTAINER} sh -c "n8n update:workflow --id=${workflowId} --active=true"`,
-      ) || `workflow ${workflowId} activated`,
+      ) || `activation command sent for ${workflowId}`,
     );
-  } else {
-    console.error("could not resolve workflow id from list:workflow output");
-    console.error(listing);
+    sh(`docker restart ${CONTAINER}`);
+    execSync("sleep 6");
+    // webhook routes register at boot; healthz answers before routes do
+    for (let i = 0; i < 30; i++) {
+      const code = probeWebhook();
+      if (code !== "404" && code !== "000") {
+        console.log(`webhook registered (probe ${code}) on attempt ${attempt}`);
+        registered = true;
+        break;
+      }
+      execSync("sleep 3");
+    }
   }
-
-  // active workflow webhooks register at startup
-  sh(`docker restart ${CONTAINER}`);
-  execSync("sleep 6");
-  console.log("container restarted — production webhook should be live at");
-  console.log("  http://localhost:5678/webhook/generate");
+  if (!registered) {
+    console.error("webhook never registered — check n8n UI for the workflow's active toggle");
+    process.exit(1);
+  }
+  console.log("production webhook live at http://localhost:5678/webhook/generate");
   rmSync(IMPORT_DIR, { recursive: true, force: true });
 }
 
