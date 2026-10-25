@@ -6,9 +6,17 @@ import ProjectEditor from "./pages/ProjectEditor";
 
 function Guarded({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
-  if (loading) return <main style={{ margin: "3rem auto", color: "var(--text-muted)" }}>Loading…</main>;
+  if (loading) return <main className="page page-narrow" style={{ marginTop: "4rem", color: "var(--text-muted)" }}>Loading…</main>;
   if (!session) return <Navigate to="/signin" replace />;
   return <>{children}</>;
+}
+
+/** Signed-in users should never sit on /signin. */
+function SignInRoute() {
+  const { session, loading } = useAuth();
+  if (loading) return <main className="page page-narrow" style={{ marginTop: "4rem", color: "var(--text-muted)" }}>Loading…</main>;
+  if (session) return <Navigate to="/" replace />;
+  return <SignIn />;
 }
 
 export default function App() {
@@ -16,7 +24,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signin" element={<SignInRoute />} />
           <Route
             path="/"
             element={
