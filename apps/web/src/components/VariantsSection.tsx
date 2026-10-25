@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import mermaid from "mermaid";
+import mermaid from "../lib/mermaid";
 import {
   validateSocialContent,
   weightedXLength,

@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import mermaid from "mermaid";
+import mermaid from "../lib/mermaid";
 import { api, ApiError } from "../lib/api";
 import type { DiagramRow, JobResponse } from "../types";
-
-mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "dark" });
 
 interface Props {
   diagram: DiagramRow;

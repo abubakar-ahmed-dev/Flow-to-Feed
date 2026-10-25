@@ -10,6 +10,7 @@ const BASE_RULES = [
   '3. Component names at most 3 words. At most 12 components.',
   '4. Use -> between component names in flows, one flow per line.',
   '5. Anything not stated explicitly goes in Assumptions, never silently into a flow.',
+  '6. Never copy this template, its placeholders, or its rules into your answer. Components and Flows contain ONLY real system names from the passage - never words like component, max, each, total, comma, none, yes, or text inside < >.',
 ].join('\n');
 
 const ANALYSIS_SHAPE = [

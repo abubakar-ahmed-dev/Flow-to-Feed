@@ -11,6 +11,29 @@
 
 const ARROW = /(?:→|->|-->)/;
 
+// The model sometimes echoes prompt scaffolding (rule text, placeholders,
+// validation words) into Components/Flows. These lines compile into junk
+// nodes ("max 3 words each", "<Component>- ?", "Yes"), so drop them here.
+const ECHO_TAIL = /\s*[-–—:]\s*(correct|incorrect|yes|no|ok|none|stated|unstated)\s*$/i;
+const JUNK_NAME = /(^|[^a-z])(max|comma|separated|unstated|rule|rules|instruction|passage|format|placeholder|template|words|each|total|n\/a|tbd|sentence|markdown|labels?|title|summary|assumptions?|components?|flows?|example|examples|step \d)([^a-z]|$)/i;
+
+function cleanName(raw) {
+  return raw
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\$/g, '')
+    .replace(ECHO_TAIL, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\.+$/, '');
+}
+
+function isJunk(name) {
+  if (name.length < 2 || name.length > 40) return true;
+  if (/[<>?]/.test(name)) return true;
+  if (/^(none|yes|no|ok|correct|true|false|n\/a|tbd|unknown|missing)$/i.test(name)) return true;
+  return JUNK_NAME.test(name);
+}
+
 export function slug(s) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'svc';
 }
@@ -44,8 +67,8 @@ function parseAnalysis(raw) {
     }
     if ((m = line.match(/^Components?\s*:\s*(.+)$/i))) {
       for (const part of m[1].split(/,|;/)) {
-        const name = part.replace(/\([^)]*\)/g, '').replace(/\$/g, '').trim().replace(/\.+$/, '');
-        if (name && name.split(/\s+/).length <= 4) comps.set(slug(name), name);
+        const name = cleanName(part);
+        if (name && !isJunk(name) && name.split(/\s+/).length <= 4) comps.set(slug(name), name);
       }
       continue;
     }
@@ -54,12 +77,20 @@ function parseAnalysis(raw) {
       const body = line.replace(/^Flow\s*\d*\s*[^:]*:\s*/i, '');
       for (const seg of body.split(/,(?![^()]*\))/)) {
         if (!ARROW.test(seg)) continue;
-        const chain = seg.split(ARROW).map(s => s.replace(/^[^:]*:\s*/, '').replace(/\([^)]*\)/g, '').replace(/\$/g, '').replace(/\.+$/, '').trim()).filter(Boolean);
+        const chain = seg.split(ARROW).map(s => cleanName(s.replace(/^[^:]*:\s*/, ''))).filter(Boolean);
         if (chain.length < 2) continue;
-        if (chain.some(p => p.split(/\s+/).length > 4)) continue;
+        if (chain.some(isJunk)) continue; // echoed rule/placeholder in the chain poisons the edge
         for (const p of chain) if (!comps.has(slug(p))) comps.set(slug(p), p);
         flows.push({ label: (labelMatch ? labelMatch[1] : '').trim() || 'flow', chain });
       }
+    }
+  }
+  // Cap components; drop flows that reference capped-out names (an edge to an
+  // undeclared node is a render error in architecture-beta).
+  if (comps.size > 12) {
+    for (const key of [...comps.keys()].slice(12)) comps.delete(key);
+    for (let i = flows.length - 1; i >= 0; i--) {
+      if (flows[i].chain.some(p => !comps.has(slug(p)))) flows.splice(i, 1);
     }
   }
   return { comps, flows, title, summary, assumptions };
@@ -67,9 +98,7 @@ function parseAnalysis(raw) {
 
 function compileArchitecture(parsed) {
   if (parsed.comps.size === 0) return null;
-  const dirs = ['R', 'L', 'T', 'B'];
   const out = ['architecture-beta', '    group app(cloud)[Application]'];
-  let i = 0;
   for (const [s, d] of parsed.comps) out.push('    service ' + s + '(' + iconType(d) + ')[' + d.slice(0, 24) + '] in app');
   const seen = new Set();
   for (const f of parsed.flows) {
@@ -79,8 +108,9 @@ function compileArchitecture(parsed) {
       const key = a + '|' + b;
       if (seen.has(key) || a === b) continue;
       seen.add(key);
-      out.push('    ' + a + ':' + dirs[i % 4] + ' -- ' + dirs[(i + 1) % 4] + ':' + b);
-      i++;
+      // fixed right/left ports keep chains reading left-to-right; alternating
+      // all four port sides scatters nodes across the canvas
+      out.push('    ' + a + ':R -- L:' + b);
     }
   }
   return out.join('\n');
