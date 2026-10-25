@@ -34,6 +34,7 @@ export default function ProjectEditor() {
   const diagramSourceRef = useRef<HTMLTextAreaElement>(null);
 
   function captureSelectionFrom(el: HTMLTextAreaElement | null) {
+    if (!el) { setPassage(null); return; }
     const { selectionStart, selectionEnd } = el;
     if (selectionEnd - selectionStart < 8) { setPassage(null); return; }
     setPassage({ text: markdown.slice(selectionStart, selectionEnd), start: selectionStart, end: selectionEnd });
