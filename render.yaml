@@ -1,45 +1,82 @@
-# Render blueprint for the FlowToFeed application service.
-# The n8n service is created manually in the Render dashboard (Docker runtime
-# with a persistent disk); see docs/deployment.md for the exact steps.
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Deploys on commits to MAIN only (each service pins branch: main + autoDeploy).
+# Work happens on dev; merging dev -> main is the deploy button.
+#
+# Create once: Render dashboard -> New -> Blueprint -> pick this repo ->
+# branch "main". Every `sync: false` value is prompted in the dashboard before
+# the first deploy.
+#
+# NOTE: n8n stays self-hosted (local Docker, per architecture decision).
+# Live generation from the hosted app only works while the local stack plus an
+# HTTPS tunnel (e.g. `cloudflared tunnel --url http://localhost:5678`) is up;
+# its https URL goes into N8N_GENERATION_WEBHOOK_URL.
+
 services:
+  # ---------------- API (Express) ----------------
   - type: web
-    name: flowtofeed-app
+    name: flowtofeed-api
     runtime: node
-    plan: starter
+    plan: free
+    branch: main # main pushes only; dev never deploys
+    autoDeploy: true
     region: oregon
+    buildCommand: npm ci && npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/api
+    startCommand: node apps/api/dist/server.js
     healthCheckPath: /api/health
-    buildCommand: npm ci && npm run build
-    startCommand: npm run start -w @flowtofeed/api
     envVars:
       - key: NODE_ENV
         value: production
-      - key: N8N_BASE_URL
-        sync: false
-      - key: N8N_GENERATION_WEBHOOK_URL
-        sync: false
-      - key: N8N_DISTRIBUTION_WEBHOOK_URL
-        sync: false
-      - key: N8N_WEBHOOK_SECRET
-        generateValue: true
-      - key: N8N_CALLBACK_SECRET
-        generateValue: true
-      - key: N8N_CALLBACK_BASE_URL
-        sync: false
+      - key: NODE_VERSION
+        value: "22"
+      # public origin of the web app (CORS allow-list) — keep in sync with the
+      # actual onrender.com URL Render assigns to flowtofeed-web
+      - key: APP_BASE_URL
+        value: https://flowtofeed-web.onrender.com
       - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SECRET_KEY
         sync: false
       - key: SUPABASE_PUBLISHABLE_KEY
         sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
       - key: SUPABASE_MEDIA_BUCKET
         value: shareable-assets
-      - key: OWNER_USER_ID
+      # MUST equal the local stack's N8N_WEBHOOK_SECRET — the n8n workflow
+      # authenticates its trigger with this header. Never generateValue here.
+      - key: N8N_WEBHOOK_SECRET
         sync: false
-      - key: GEMMA_API_KEY
+      # MUST equal the local stack's N8N_CALLBACK_SECRET — the workflow signs
+      # its callbacks with this header. Never generateValue here.
+      - key: N8N_CALLBACK_SECRET
         sync: false
-      - key: GEMMA_MODEL
+      # HTTPS URL of the local n8n tunnel; blank/unset only disables generation
+      - key: N8N_GENERATION_WEBHOOK_URL
         sync: false
-      - key: BUFFER_API_KEY
+
+  # ---------------- Web (static SPA) ----------------
+  - type: web
+    name: flowtofeed-web
+    runtime: static
+    plan: free
+    branch: main # main pushes only; dev never deploys
+    autoDeploy: true
+    region: oregon
+    buildCommand: npm ci && npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/web
+    staticPublishPath: apps/web/dist
+    pullRequestPreviewsEnabled: no
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Supabase JS client in the browser — same values as local apps/web/.env
+      - key: VITE_SUPABASE_URL
         sync: false
-      - key: DEFAULT_TIMEZONE
-        value: Asia/Karachi
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      # absolute origin of the API service (web calls /api cross-origin in prod)
+      - key: VITE_API_URL
+        value: https://flowtofeed-api.onrender.com
+    routes:
+      # SPA fallback: every unknown path serves the app shell
+      - type: rewrite
+        source: /*
+        destination: /index.html

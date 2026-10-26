@@ -1,5 +1,9 @@
 import { supabase } from "./supabase";
 
+// Same-origin "/api" via the Vite dev proxy locally; on hosted static builds
+// the absolute API origin arrives at build time (Render sets VITE_API_URL).
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -24,7 +28,7 @@ export async function api<T>(
   path: string,
   init: { method?: string; body?: unknown } = {},
 ): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}/api${path}`, {
     method: init.method ?? "GET",
     headers: {
       "content-type": "application/json",

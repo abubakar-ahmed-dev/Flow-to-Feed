@@ -119,13 +119,15 @@ async function main() {
   // The outgoing callback secret cannot ride a generic headerAuth credential
   // (HTTP Request node drops it at runtime — verified 2026-10-24), so the
   // provisioned workflow copy carries the real value; the committed source
-  // keeps the placeholder.
+  // keeps the placeholder. Same trick for the API base URL: the committed
+  // workflow targets the local API (host.docker.internal); setting
+  // N8N_CALLBACK_BASE_URL repoints callbacks (e.g. at the Render deploy).
+  const callbackBase = env.get("N8N_CALLBACK_BASE_URL") ?? "http://host.docker.internal:3000";
   writeFileSync(
     path.join(IMPORT_DIR, "generate.json"),
-    readFileSync(WORKFLOW_SRC, "utf8").replaceAll(
-      "REPLACE_N8N_CALLBACK_SECRET",
-      callbackSecret,
-    ),
+    readFileSync(WORKFLOW_SRC, "utf8")
+      .replaceAll("REPLACE_N8N_CALLBACK_SECRET", callbackSecret)
+      .replaceAll("http://host.docker.internal:3000", callbackBase.replace(/\/+$/, "")),
   );
 
   sh(`docker exec ${CONTAINER} mkdir -p /home/node/.n8n-import`);
