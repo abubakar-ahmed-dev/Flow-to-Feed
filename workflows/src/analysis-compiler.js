@@ -163,7 +163,10 @@ function compileArchitecture(parsed) {
       const key = a + '|' + b;
       if (seen.has(key) || a === b) continue;
       seen.add(key);
-      const label = first && f.label ? '|' + f.label.slice(0, 24).replace(/[|"]/g, '') + '|' : '';
+      // a bare "Flow 1:" line parses to the generic label "flow" — silence it,
+      // an edge reading |flow| tells the reader nothing
+      const name = f.label && !/^flow$/i.test(f.label) ? f.label : '';
+      const label = first && name ? '|' + name.slice(0, 24).replace(/[|"]/g, '') + '|' : '';
       out.push('    ' + a + ' ' + (label ? '-->' : '---') + label + ' ' + b);
       mine.push(ei++);
       first = false;

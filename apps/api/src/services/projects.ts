@@ -134,9 +134,32 @@ export interface ProjectDetail {
   jobs: JobRow[];
 }
 
+// A job is orphaned when the n8n worker restarts mid-execution: no terminal
+// callback ever arrives and the UI polls a ghost "Working…" forever. The
+// workflow's own hard timeout is 30 min (EXECUTIONS_TIMEOUT), so anything
+// open past 35 min is provably dead.
+const STALE_JOB_AFTER_MS = 35 * 60_000;
+
+export async function failStaleJobs(projectId: string): Promise<void> {
+  const cutoff = new Date(Date.now() - STALE_JOB_AFTER_MS).toISOString();
+  await supabaseAdmin()
+    .from("jobs")
+    .update({
+      state: "failed",
+      error: {
+        code: "job_lost",
+        message: "Generation worker restarted before this job finished. Generate again.",
+      },
+    })
+    .eq("project_id", projectId)
+    .in("state", ["queued", "running"])
+    .lt("created_at", cutoff);
+}
+
 export async function getProjectDetail(
   project: ProjectRow,
 ): Promise<ProjectDetail> {
+  await failStaleJobs(project.id);
   const [diagramsRes, variantsRes, jobsRes] = await Promise.all([
     supabaseAdmin()
       .from("diagrams")
