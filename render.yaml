@@ -5,12 +5,11 @@
 #
 # Create once: Render dashboard -> New -> Blueprint -> pick this repo ->
 # branch "main". Every `sync: false` value is prompted in the dashboard before
-# the first deploy.
+# the first deploy. Step-by-step: docs/DEPLOY_RENDER.md (local only).
 #
-# NOTE: n8n stays self-hosted (local Docker, per architecture decision).
-# Live generation from the hosted app only works while the local stack plus an
-# HTTPS tunnel (e.g. `cloudflared tunnel --url http://localhost:5678`) is up;
-# its https URL goes into N8N_GENERATION_WEBHOOK_URL.
+# The n8n worker is a fourth service created manually (Docker image
+# n8nio/n8n + persistent disk + pinned N8N_ENCRYPTION_KEY) — see
+# docs/DEPLOY_RENDER.md; disks are not expressible for image services here.
 
 services:
   # ---------------- API (Express) ----------------
@@ -54,13 +53,13 @@ services:
         sync: false
 
   # ---------------- Web (static SPA) ----------------
+  # static sites have no region field — they're served from Render's global CDN
   - type: web
     name: flowtofeed-web
     runtime: static
     plan: free
     branch: main # main pushes only; dev never deploys
     autoDeploy: true
-    region: oregon
     buildCommand: npm ci && npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/web
     staticPublishPath: apps/web/dist
     pullRequestPreviewsEnabled: no
