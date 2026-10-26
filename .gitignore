@@ -35,3 +35,4 @@ coverage/
 
 # n8n credential exports must never be committed
 workflows/*credentials*
+workflows/render-import.local.json
