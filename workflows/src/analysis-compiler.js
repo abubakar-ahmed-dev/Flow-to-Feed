@@ -96,23 +96,63 @@ function parseAnalysis(raw) {
   return { comps, flows, title, summary, assumptions };
 }
 
+// Per-flow edge colors (crimson / teal / amber / slate) — hit vs miss style
+// path distinctions become visible without reading the labels.
+const FLOW_COLORS = ['#c22740', '#0f766e', '#b45309', '#475569'];
+
+const NODE_STYLE = {
+  server:   { shape: (l) => `["${l}"]`,  cls: 'app' },
+  cloud:    { shape: (l) => `["${l}"]`,  cls: 'app' },
+  cache:    { shape: (l) => `("${l}")`,  cls: 'cache' },
+  database: { shape: (l) => `[("${l}")]`, cls: 'data' },
+  disk:     { shape: (l) => `[("${l}")]`, cls: 'data' },
+  internet: { shape: (l) => `(["${l}"])`, cls: 'external' },
+};
+
+/**
+ * Architecture mode: labeled, color-coded flowchart LR (architecture-beta
+ * edges cannot carry labels — verified mermaid 11 limitation — so hit/miss
+ * style paths were invisible). Nodes keep type shapes/fills; every flow gets
+ * its own edge color and a label on its first hop.
+ */
 function compileArchitecture(parsed) {
   if (parsed.comps.size === 0) return null;
-  const out = ['architecture-beta', '    group app(cloud)[Application]'];
-  for (const [s, d] of parsed.comps) out.push('    service ' + s + '(' + iconType(d) + ')[' + d.slice(0, 24) + '] in app');
+  const out = ['flowchart LR'];
+  const classes = new Map();
+  for (const [s, d] of parsed.comps) {
+    const style = NODE_STYLE[iconType(d)] || NODE_STYLE.server;
+    out.push('    ' + s + style.shape(d.slice(0, 28).replace(/"/g, "'")));
+    classes.set(s, style.cls);
+  }
+  out.push(
+    '    classDef app fill:#fbeef0,stroke:#c22740,stroke-width:2px,color:#1c1917',
+    '    classDef data fill:#faf8f4,stroke:#78716c,stroke-width:1.5px,color:#1c1917',
+    '    classDef cache fill:#eef7f5,stroke:#0f766e,stroke-width:2px,color:#1c1917',
+    '    classDef external fill:#f5f1ea,stroke:#44403c,stroke-width:1.5px,color:#1c1917',
+  );
+  for (const [s, cls] of classes) out.push('    class ' + s + ' ' + cls);
+
   const seen = new Set();
-  for (const f of parsed.flows) {
+  const linkStyles = [];
+  let ei = 0;
+  parsed.flows.forEach((f, fi) => {
+    const color = FLOW_COLORS[fi % FLOW_COLORS.length];
+    const mine = [];
+    let first = true;
     for (let k = 0; k < f.chain.length - 1; k++) {
       const a = slug(f.chain[k]);
       const b = slug(f.chain[k + 1]);
-      const key = a + '|' + b;
+      const key = a + '|' + b + '|' + f.label;
       if (seen.has(key) || a === b) continue;
       seen.add(key);
-      // fixed right/left ports keep chains reading left-to-right; alternating
-      // all four port sides scatters nodes across the canvas
-      out.push('    ' + a + ':R -- L:' + b);
+      const label = first && f.label ? '|' + f.label.slice(0, 24).replace(/[|"]/g, '') + '|' : '';
+      out.push('    ' + a + ' ' + (label ? '-->' : '---') + label + ' ' + b);
+      mine.push(ei++);
+      first = false;
     }
-  }
+    if (mine.length) linkStyles.push('    linkStyle ' + mine.join(',') + ' stroke:' + color + ',color:' + color);
+  });
+  out.push(...linkStyles);
   return out.join('\n');
 }
 
@@ -121,18 +161,25 @@ function compileFlowchart(parsed) {
   const names = new Map();
   for (const f of parsed.flows) for (const p of f.chain) names.set(slug(p), p);
   const out = ['flowchart TD'];
-  for (const [s, d] of names) out.push('    ' + s.replace(/-/g, '_') + '[' + d.slice(0, 28) + ']');
+  for (const [s, d] of names) out.push('    ' + s.replace(/-/g, '_') + '[' + d.slice(0, 28).replace(/[|"]/g, '') + ']');
   const seen = new Set();
-  for (const f of parsed.flows) {
+  const linkStyles = [];
+  let ei = 0;
+  parsed.flows.forEach((f, fi) => {
+    const color = FLOW_COLORS[fi % FLOW_COLORS.length];
+    const mine = [];
     for (let k = 0; k < f.chain.length - 1; k++) {
       const a = slug(f.chain[k]).replace(/-/g, '_');
       const b = slug(f.chain[k + 1]).replace(/-/g, '_');
       const key = a + '|' + b + '|' + f.label;
       if (seen.has(key) || a === b) continue;
       seen.add(key);
-      out.push('    ' + a + ' -->|' + f.label.slice(0, 20) + '| ' + b);
+      out.push('    ' + a + ' -->|' + f.label.slice(0, 20).replace(/[|"]/g, '') + '| ' + b);
+      mine.push(ei++);
     }
-  }
+    if (mine.length) linkStyles.push('    linkStyle ' + mine.join(',') + ' stroke:' + color + ',color:' + color);
+  });
+  out.push(...linkStyles);
   return out.join('\n');
 }
 
@@ -187,7 +234,7 @@ export function compileAnalysis(analysisText, opts) {
       explanation: parsed.summary || 'Diagram compiled from the model analysis of the selected passage.',
       assumptions: parsed.assumptions,
       model: opts.model,
-      promptVersion: (mode + '-v2-compiled'),
+      promptVersion: (mode + '-v3-labeled'),
       componentCount: parsed.comps.size,
     },
   };

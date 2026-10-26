@@ -180,17 +180,18 @@ async function main() {
     ) || `activation command sent for ${workflowId}`,
   );
 
-  // one restart, then poll — production webhook routes only register at boot
+  // one restart, then poll — production webhook routes only register at boot,
+  // and observed n8n boots take 3+ minutes, so the budget must outlast that
   sh(`docker restart ${CONTAINER}`, 120_000);
   let registered = false;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 50; i++) {
     const code = probeWebhook();
     if (code !== "404" && code !== "000") {
       console.log(`webhook registered (probe ${code})`);
       registered = true;
       break;
     }
-    execSync("sleep 3");
+    execSync("sleep 4");
   }
   if (!registered) {
     console.error("webhook never registered — check n8n UI for the workflow's active toggle");
