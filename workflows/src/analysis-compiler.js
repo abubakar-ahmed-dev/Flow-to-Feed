@@ -23,14 +23,21 @@ function cleanName(raw) {
     .replace(/\$/g, '')
     .replace(ECHO_TAIL, '')
     .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\.+$/, '');
+    .replace(/\.+$/, '') // strip trailing dots BEFORE trim, else "Database ." -> "Database "
+    .trim();
 }
+
+// Connector words: the model sometimes glues clause fragments into a single
+// "component" ("Database, then Application"). A real component name never
+// starts with one of these.
+const CONNECTOR_START = /^(then|and|or|also|after|next|into|from|to|if|when|where|with|on|at|the|it|its|first|second|finally|invalidate|populates?|updates?|checks?|returns?)\b/i;
 
 function isJunk(name) {
   if (name.length < 2 || name.length > 40) return true;
   if (/[<>?]/.test(name)) return true;
+  if (/[,;]/.test(name)) return true; // fragments of a split clause
   if (/^(none|yes|no|ok|correct|true|false|n\/a|tbd|unknown|missing)$/i.test(name)) return true;
+  if (CONNECTOR_START.test(name)) return true;
   return JUNK_NAME.test(name);
 }
 
@@ -59,7 +66,16 @@ function parseAnalysis(raw) {
   const assumptions = [];
   for (const line of lines) {
     let m;
-    if ((m = line.match(/^Title\s*:\s*(.+)$/i))) { title = m[1].trim().slice(0, 80); continue; }
+    if ((m = line.match(/^Title\s*:\s*(.+)$/i))) {
+      // strip echoed meta ("(4 words).*", backticks) and parenthetical annotations
+      title = m[1].trim()
+        .replace(/\(([^)]*)\)/g, (full, inner) => (/\d|\bword|\bmax|\btotal|\beach|\bchar/i.test(inner) ? '' : full))
+        .replace(/\s+/g, ' ')
+        .replace(/[\s.*`]+$/, '') // trailing ".", "*", "`" are model echo artifacts
+        .trim()
+        .slice(0, 80);
+      continue;
+    }
     if ((m = line.match(/^Summary\s*:\s*(.+)$/i))) { summary = m[1].trim(); continue; }
     if ((m = line.match(/^Assumptions?\s*:\s*(.+)$/i))) {
       for (const a of m[1].split(/,|;/)) if (a.trim() && !/^none$/i.test(a.trim())) assumptions.push(a.trim());
@@ -142,7 +158,9 @@ function compileArchitecture(parsed) {
     for (let k = 0; k < f.chain.length - 1; k++) {
       const a = slug(f.chain[k]);
       const b = slug(f.chain[k + 1]);
-      const key = a + '|' + b + '|' + f.label;
+      // collapse by pair: a second flow over the same hop recolors nothing and
+      // would only draw parallel noise; its label surfaces on its next new hop
+      const key = a + '|' + b;
       if (seen.has(key) || a === b) continue;
       seen.add(key);
       const label = first && f.label ? '|' + f.label.slice(0, 24).replace(/[|"]/g, '') + '|' : '';
