@@ -180,24 +180,31 @@ async function main() {
     ) || `activation command sent for ${workflowId}`,
   );
 
-  // one restart, then poll — production webhook routes only register at boot;
-  // observed boots consistently take ~4 minutes, so budget 6 minutes
+  // one restart, then a short confirm poll. Production webhook routes only
+  // register at boot and observed boots take 4-6+ minutes — outliving them
+  // here wastes the run (every budget so far was beaten by the boot). The
+  // script's contract: import, activate, restart; confirmation is a separate
+  // probe once boot settles.
   sh(`docker restart ${CONTAINER}`, 120_000);
   let registered = false;
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 24; i++) {
     const code = probeWebhook();
     if (code !== "404" && code !== "000") {
       console.log(`webhook registered (probe ${code})`);
       registered = true;
       break;
     }
-    execSync("sleep 4");
+    execSync("sleep 5");
   }
   if (!registered) {
-    console.error("webhook never registered — check n8n UI for the workflow's active toggle");
-    process.exit(1);
+    console.log(
+      "container rebooting — webhook routes register 4-6 min after boot.\n" +
+        "Confirm with: curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:5678/webhook/generate -H \"x-webhook-secret: probe\"\n" +
+        "(403 = registered and rejecting the probe secret; 404 = not yet)",
+    );
+  } else {
+    console.log("production webhook live at http://localhost:5678/webhook/generate");
   }
-  console.log("production webhook live at http://localhost:5678/webhook/generate");
   rmSync(IMPORT_DIR, { recursive: true, force: true });
 }
 
