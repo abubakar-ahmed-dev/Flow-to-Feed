@@ -83,7 +83,8 @@
         "options": {
           "timeout": 480000
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "validate",
@@ -195,7 +196,8 @@
         "options": {
           "timeout": 480000
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "validate-repair",
