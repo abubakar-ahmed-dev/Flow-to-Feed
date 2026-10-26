@@ -53,11 +53,10 @@ services:
         sync: false
 
   # ---------------- Web (static SPA) ----------------
-  # static sites have no region field — they're served from Render's global CDN
+  # static sites have no region/plan fields — free, served from Render's global CDN
   - type: web
     name: flowtofeed-web
     runtime: static
-    plan: free
     branch: main # main pushes only; dev never deploys
     autoDeploy: true
     buildCommand: npm ci && npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/web
