@@ -20,7 +20,9 @@ services:
     branch: main # main pushes only; dev never deploys
     autoDeploy: true
     region: oregon
-    buildCommand: npm ci && npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/api
+    # NODE_ENV=production makes npm ci skip devDependencies (typescript,
+    # @types/*) — build-time tooling must be installed explicitly
+    buildCommand: npm ci --include=dev && npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/api
     startCommand: node apps/api/dist/server.js
     healthCheckPath: /api/health
     envVars:
@@ -59,7 +61,7 @@ services:
     runtime: static
     branch: main # main pushes only; dev never deploys
     autoDeploy: true
-    buildCommand: npm ci && npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/web
+    buildCommand: npm ci --include=dev && npm run build -w @flowtofeed/shared && npm run build -w @flowtofeed/web
     staticPublishPath: apps/web/dist
     pullRequestPreviewsEnabled: no
     envVars:
