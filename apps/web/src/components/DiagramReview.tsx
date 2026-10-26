@@ -159,13 +159,13 @@ export default function DiagramReview({ diagram, onSave }: Props) {
           </span>
         )}
         <span style={{ flex: 1 }} />
-        <button onClick={() => setEditing(!editing)} style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <button className="ghost" onClick={() => setEditing(!editing)}>
           {editing ? "Preview" : "Edit source"}
         </button>
         {svg && (
           <>
-            <button onClick={exportSvg} style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>SVG</button>
-            <button onClick={exportPng} style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>PNG</button>
+            <button className="ghost" onClick={exportSvg}>SVG</button>
+            <button className="ghost" onClick={exportPng}>PNG</button>
           </>
         )}
         <button

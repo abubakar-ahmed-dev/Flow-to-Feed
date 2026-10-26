@@ -78,7 +78,15 @@ function parseAnalysis(raw) {
     }
     if ((m = line.match(/^Summary\s*:\s*(.+)$/i))) { summary = m[1].trim(); continue; }
     if ((m = line.match(/^Assumptions?\s*:\s*(.+)$/i))) {
-      for (const a of m[1].split(/,|;/)) if (a.trim() && !/^none$/i.test(a.trim())) assumptions.push(a.trim());
+      for (const piece of m[1].split(/,|;/)) {
+        const a = piece.replace(/^["'*(]+|["'*)]+$/g, '').replace(/\*+$/, '').trim();
+        // the model echoes format guidance ("\"None\" if nothing unstated",
+        // "Unstated details", "None*", "...") as if it were content
+        if (!a) continue;
+        if (/^none$/i.test(a)) continue;
+        if (/nothing unstated|^unstated details|^\.\.+|^format|^template/i.test(a)) continue;
+        assumptions.push(a);
+      }
       continue;
     }
     if ((m = line.match(/^Components?\s*:\s*(.+)$/i))) {
