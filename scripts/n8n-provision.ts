@@ -180,11 +180,11 @@ async function main() {
     ) || `activation command sent for ${workflowId}`,
   );
 
-  // one restart, then poll — production webhook routes only register at boot,
-  // and observed n8n boots take 3+ minutes, so the budget must outlast that
+  // one restart, then poll — production webhook routes only register at boot;
+  // observed boots consistently take ~4 minutes, so budget 6 minutes
   sh(`docker restart ${CONTAINER}`, 120_000);
   let registered = false;
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 90; i++) {
     const code = probeWebhook();
     if (code !== "404" && code !== "000") {
       console.log(`webhook registered (probe ${code})`);
